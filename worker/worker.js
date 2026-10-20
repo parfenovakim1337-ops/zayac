@@ -219,7 +219,7 @@ export default {
       // владельцу игры — радужный ник навсегда (без бонуса к выплатам)
       if (admin) await env.DB.batch([
         env.DB.prepare('INSERT OR IGNORE INTO flags (id, rainbow) VALUES (?, 1)').bind(user.id),
-        env.DB.prepare('INSERT OR REPLACE INTO ref_bonus (id, n) VALUES (?, ?)').bind(user.id, OWNER_BONUS_REFS),
+        env.DB.prepare('INSERT INTO ref_bonus (id, n) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET n = excluded.n WHERE ref_bonus.n != excluded.n').bind(user.id, OWNER_BONUS_REFS), // пишет в базу, только если число поменялось
       ]);
     }
 
