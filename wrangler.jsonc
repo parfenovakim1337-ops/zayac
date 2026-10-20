@@ -1,0 +1,12 @@
+// Настройки сервера для автодеплоя из GitHub (Cloudflare → zayac-top → Settings → Builds).
+// Секрет BOT_TOKEN хранится в Cloudflare и при деплое не трогается.
+{
+  "name": "zayac-top",
+  "main": "worker/worker.js",
+  "compatibility_date": "2025-01-01",
+  "workers_dev": true,
+  "keep_vars": true,
+  "d1_databases": [
+    { "binding": "DB", "database_name": "zayac-top", "database_id": "9761d115-e751-46c0-9401-62a828bef5d4" }
+  ]
+}
