@@ -7610,7 +7610,7 @@ async function tgTopLoad(){
 }
 function tgTopHead(){
   keepNick(tgName());
-  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} ${tgNameHTML({ gold: tgHas('gold'), crown: LB.myCrown || 0, rainbow: TG_REFS >= REF_RAINBOW }, tgName())}</span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
+  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} ${tgNameHTML({ gold: tgHas('gold'), crown: LB.myCrown || 0, rainbow: TG_REFS >= REF_RAINBOW || !!LB.myRainbow }, tgName())}</span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
 }
 function tgTopAfter(root){
   const nb = $('#lbNick', root); if (nb) nb.onclick = () => openModal({ title: 'Ник в топе', body: `<p class="muted">От 3 до 16 символов: буквы, цифры, пробел, _ и -. Пусто — будет имя из Telegram.</p><input class="input" id="tgNick" maxlength="16" autocomplete="off" value="${esc(state.settings.nick || '')}">`,
@@ -7651,6 +7651,7 @@ function tgCrown(d){
   let ch = false;
   if (typeof d.refs === 'number' && d.refs !== TG_REFS){ TG_REFS = d.refs; try { localStorage.setItem(tgItemsKey() + '-refs', String(d.refs)); } catch(e){} ch = true; try { updateForm(); } catch(e){} }
   if (d.refLink && d.refLink !== LB.refLink){ LB.refLink = d.refLink; ch = true; }
+  if (typeof d.rainbow === 'boolean' && d.rainbow !== LB.myRainbow){ LB.myRainbow = d.rainbow; ch = true; }
   if (ch) tgRefRender();
   if (typeof d.crown === 'number' && d.crown !== LB.myCrown){ LB.myCrown = d.crown; ch = true; }
   if (typeof d.crownsLeft === 'number' && d.crownsLeft !== LB.crownsLeft){ LB.crownsLeft = d.crownsLeft; ch = true; }
@@ -7669,8 +7670,8 @@ function refX(){ return 1 + 0.1 * Math.min(+TG_REFS || 0, 20); } // объявл
 function tgRefRender(){
   const box = $('#tgRef'); if (!box) return;
   box.hidden = !TOP_API;
-  const n = TG_REFS, left = Math.max(0, REF_RAINBOW - n), link = LB.refLink || '';
-  $('#tgRefBody', box).innerHTML = `<div class="tg-ref-stats"><div><b>${n}</b><span class="muted">друзей</span></div><div><b class="gainc">×${refX().toFixed(1)}</b><span class="muted">к выплатам</span></div><div><b>${n >= REF_RAINBOW ? '🌈' : n + '/' + REF_RAINBOW}</b><span class="muted">${n >= REF_RAINBOW ? 'радужный ник' : 'до радужного ника'}</span></div></div>
+  const n = TG_REFS, rb = n >= REF_RAINBOW || !!LB.myRainbow, left = rb ? 0 : Math.max(0, REF_RAINBOW - n), link = LB.refLink || '';
+  $('#tgRefBody', box).innerHTML = `<div class="tg-ref-stats"><div><b>${n}</b><span class="muted">друзей</span></div><div><b class="gainc">×${refX().toFixed(1)}</b><span class="muted">к выплатам</span></div><div><b>${rb ? '🌈' : n + '/' + REF_RAINBOW}</b><span class="muted">${rb ? 'радужный ник' : 'до радужного ника'}</span></div></div>
     <p class="muted">Каждый друг, впервые открывший игру по твоей ссылке, добавляет <b>+0.1</b> к множителю выплат: 1 друг — ×1.1, 5 друзей — ×1.5, максимум ×${(1 + REF_STEP * REF_CAP).toFixed(1)} за ${REF_CAP} друзей. ${left ? `Ещё ${left} — и твой ник в топе станет радужным 🌈` : 'Твой ник в топе — радужный 🌈'}</p>
     <div class="row"><button class="btn" type="button" id="refShare"${link ? '' : ' disabled'}>Позвать друзей</button><button class="btn ghost" type="button" id="refCopy"${link ? '' : ' disabled'}>Скопировать ссылку</button></div>`;
   const sh = $('#refShare', box); if (sh) sh.onclick = () => { const t = 'Залетай в Зайцев 🐰 — крути, собирай редких зайцев и попади в топ!'; try { window.TGW.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(t)); } catch(e){ window.open(link); } };
@@ -7801,7 +7802,7 @@ function renderTop(){
   // Кто не может записать себя в общий топ, видит свою строку локально — на том месте, где был бы
   let rows = LB.rows;
   if (LB.status === 'live' && (window.TGW ? (!LB.me || LB.banned) : (!AC.on || AC.local))){
-    const b = lbBody(); rows = rows.concat([{ id: '__me', lg: b.lg, money: myMoney, best: b.best !== '0' ? new D(b.best) : null, rare: b.rare, gold: !!(window.TGW && tgHas('gold')), rainbow: !!(window.TGW && TG_REFS >= REF_RAINBOW), crown: window.TGW ? LB.myCrown || 0 : 0, nick: window.TGW ? tgName() : AC.on ? AC.nick : 'Вы (гость)', ts: Date.now(), local: true }]).sort((x, y) => y.lg - x.lg);
+    const b = lbBody(); rows = rows.concat([{ id: '__me', lg: b.lg, money: myMoney, best: b.best !== '0' ? new D(b.best) : null, rare: b.rare, gold: !!(window.TGW && tgHas('gold')), rainbow: !!(window.TGW && (TG_REFS >= REF_RAINBOW || LB.myRainbow)), crown: window.TGW ? LB.myCrown || 0 : 0, nick: window.TGW ? tgName() : AC.on ? AC.nick : 'Вы (гость)', ts: Date.now(), local: true }]).sort((x, y) => y.lg - x.lg);
   }
   const myIdx = rows.findIndex(r => r.id === me);
   const head = `<div class="shop-head"><div><h2>Лидерборд</h2><p class="muted">Топ-${LB_LIMIT} игроков по балансу. ${window.TGW ? 'Ваш результат обновляется сам раз в минуту, когда меняется.' : 'Ваш результат обновляется сам каждые 20 секунд, когда меняется.'}</p></div>

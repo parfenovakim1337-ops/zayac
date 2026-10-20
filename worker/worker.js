@@ -104,7 +104,8 @@ async function touchPlayer(env, user, k) {
 }
 async function refInfo(env, user, k) {
   const n = await refCount(env.DB, user.id), bot = await botUser(env);
-  return { refs: n, refLink: bot ? `https://t.me/${bot}?start=r_${k}` : '' };
+  const fl = await env.DB.prepare('SELECT rainbow FROM flags WHERE id = ?').bind(user.id).first();
+  return { refs: n, refLink: bot ? `https://t.me/${bot}?start=r_${k}` : '', rainbow: n >= REF_RAINBOW || !!(fl && fl.rainbow) };
 }
 const owned = async (db, uid) => (await db.prepare('SELECT item FROM purchases WHERE user_id = ? AND refunded = 0').bind(uid).all()).results.map(r => r.item);
 
@@ -164,6 +165,7 @@ async function ensure(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY, k TEXT, ref_by INTEGER, ok INTEGER DEFAULT 0, ts INTEGER)'),
     db.prepare('CREATE INDEX IF NOT EXISTS players_k ON players (k)'),
     db.prepare('CREATE INDEX IF NOT EXISTS players_ref ON players (ref_by, ok)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS flags (id INTEGER PRIMARY KEY, rainbow INTEGER DEFAULT 0)'),
   ]);
   ready = true;
 }
@@ -181,7 +183,7 @@ export default {
       if (!memo || Date.now() - memo.at > 15000) {
         const { results } = await env.DB.prepare(`SELECT id, k, name, lg, money, best, rare, ts,
           EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold,
-          (SELECT COUNT(*) FROM players pl WHERE pl.ref_by = top.id AND pl.ok = 1) >= ${REF_RAINBOW} AS rainbow
+          ((SELECT COUNT(*) FROM players pl WHERE pl.ref_by = top.id AND pl.ok = 1) >= ${REF_RAINBOW} OR EXISTS (SELECT 1 FROM flags f WHERE f.id = top.id AND f.rainbow = 1)) AS rainbow
           FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?`).bind(LIMIT).all();
         const c = await crowns(env.DB);
         memo = { rows: results.map(({ id, ...r }) => ({ ...r, crown: c.rank.get(id) || 0 })), crownsLeft: c.left, at: Date.now() };
@@ -209,7 +211,11 @@ export default {
     const k = await keyOf(user.id, env.BOT_TOKEN);
     const admin = String(user.username || '').toLowerCase() === String(env.ADMIN_USERNAME || 'zenix228').toLowerCase();
 
-    if (url.pathname === '/score' || url.pathname === '/me') await touchPlayer(env, user, k);
+    if (url.pathname === '/score' || url.pathname === '/me') {
+      await touchPlayer(env, user, k);
+      // владельцу игры — радужный ник навсегда (без бонуса к выплатам)
+      if (admin) await env.DB.prepare('INSERT OR IGNORE INTO flags (id, rainbow) VALUES (?, 1)').bind(user.id).run();
+    }
 
     if (url.pathname === '/score') {
       const lg = Number(body.lg);
