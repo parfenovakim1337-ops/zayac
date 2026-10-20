@@ -7551,7 +7551,7 @@ async function tgTopLoad(){
 }
 function tgTopHead(){
   keepNick(tgName());
-  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} <b translate="no">${esc(tgName())}</b></span><button class="btn ghost" type="button" id="lbNick">Сменить ник</button>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
+  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} <b translate="no">${esc(tgName())}</b></span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
 }
 function tgTopAfter(root){
   const nb = $('#lbNick', root); if (nb) nb.onclick = () => openModal({ title: 'Ник в топе', body: `<p class="muted">От 3 до 16 символов: буквы, цифры, пробел, _ и -. Пусто — будет имя из Telegram.</p><input class="input" id="tgNick" maxlength="16" autocomplete="off" value="${esc(state.settings.nick || '')}">`,
