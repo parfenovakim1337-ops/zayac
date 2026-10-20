@@ -56,7 +56,7 @@ const ITEMS = {
   autoall: { title: 'Авто олл-ин навсегда', description: 'Кнопка «Авто олл-ин»: игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп». Покупка навсегда, на всех устройствах.', price: 149 },
   gold: { title: 'Золотой ник в топе', description: 'Ваше имя в общем топе горит золотом. Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки. Покупка навсегда.', price: 49 },
 };
-const GAME_URL_DEFAULT = 'https://parfenovakim1337-ops.github.io/zayac/';
+const GAME_URL_DEFAULT = 'https://zayac.pages.dev/';
 const tg = async (env, method, params) => {
   const r = await fetch('https://api.telegram.org/bot' + env.BOT_TOKEN + '/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
   return r.json();
