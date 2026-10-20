@@ -7679,9 +7679,11 @@ const b64enc = s => btoa(unescape(encodeURIComponent(s)));
 const b64dec = s => decodeURIComponent(escape(atob(s)));
 const exportCode = () => SAVE_PREFIX + b64enc(portableJSON());
 function decodeSave(text){
-  text = String(text || '').trim().replace(/\s+/g, '');
-  if (text.startsWith(SAVE_PREFIX)) text = b64dec(text.slice(SAVE_PREFIX.length));
-  else if (!text.startsWith('{')) throw new Error('Это не код сохранения Rabbit Slots.');
+  const raw0 = String(text || '').trim();
+  text = raw0.replace(/\s+/g, '');
+  const at = text.indexOf(SAVE_PREFIX);
+  if (at >= 0) text = b64dec(text.slice(at + SAVE_PREFIX.length).replace(/[^A-Za-z0-9+/=]/g, ''));
+  else if (!text.startsWith('{')) throw new Error(raw0 ? 'Это не код сохранения Rabbit Slots. Вставилось: «' + raw0.slice(0, 40) + (raw0.length > 40 ? '…' : '') + '». Код должен начинаться с RSAVE1:' : 'Поле пустое — вставьте код сохранения.');
   const s = parseState(text);
   if (!s || typeof s.balance !== 'string') throw new Error('Код сохранения повреждён.');
   return s;
