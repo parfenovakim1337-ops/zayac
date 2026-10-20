@@ -1,6 +1,8 @@
 // Сервер топа для Telegram-версии игры (Cloudflare Worker + база D1).
 // Нужны: привязка D1 с именем DB и секрет BOT_TOKEN (токен бота из @BotFather).
-// Необязательно: ADMIN_USERNAME (по умолчанию zenix228) — кто может скрывать игроков из топа.
+// Необязательно: ADMIN_USERNAME (по умолчанию zenix228) — кто может скрывать игроков из топа и делать возвраты,
+//                GAME_URL — адрес игры для кнопки «Играть» в ответ на /start.
+// Покупки за звёзды: один раз откройте <адрес воркера>/setup — Telegram начнёт присылать сюда оплаты.
 // Личность игрока проверяется по подписи Telegram (initData), подделать чужой аккаунт нельзя.
 
 const LIMIT = 100;
@@ -46,12 +48,66 @@ const keyOf = async (id, token) => hex(await hmac(token, 'k:' + id)).slice(0, 12
 const cleanName = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20);
 
 let ready = false, memo = null;
+
+// Товары за звёзды. Цена — в звёздах (XTR). Меняя цену здесь, поменяйте её и в игре (TG_ITEMS).
+const ITEMS = {
+  autoall: { title: 'Авто олл-ин навсегда', description: 'Кнопка «Авто олл-ин»: игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп». Покупка навсегда, на всех устройствах.', price: 149 },
+  gold: { title: 'Золотой ник в топе', description: 'Ваше имя в общем топе горит золотом. Покупка навсегда.', price: 49 },
+};
+const GAME_URL_DEFAULT = 'https://parfenovakim1337-ops.github.io/zayac/';
+const tg = async (env, method, params) => {
+  const r = await fetch('https://api.telegram.org/bot' + env.BOT_TOKEN + '/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
+  return r.json();
+};
+const hookSecret = async env => hex(await hmac(env.BOT_TOKEN, 'webhook')).slice(0, 48);
+const owned = async (db, uid) => (await db.prepare('SELECT item FROM purchases WHERE user_id = ? AND refunded = 0').bind(uid).all()).results.map(r => r.item);
+
+async function onUpdate(u, env) {
+  const db = env.DB;
+  // 1) Telegram спрашивает, можно ли провести оплату — проверяем товар, цену и что он ещё не куплен
+  if (u.pre_checkout_query) {
+    const q = u.pre_checkout_query, [item, uid] = String(q.invoice_payload || '').split(':'), it = ITEMS[item];
+    let err = '';
+    if (!it || q.currency !== 'XTR' || q.total_amount !== it.price) err = 'Цена изменилась, откройте покупку заново.';
+    else if (String(q.from.id) !== uid) err = 'Покупка оформлена на другой аккаунт.';
+    else if ((await owned(db, q.from.id)).includes(item)) err = 'Это у вас уже куплено.';
+    await tg(env, 'answerPreCheckoutQuery', err ? { pre_checkout_query_id: q.id, ok: false, error_message: err } : { pre_checkout_query_id: q.id, ok: true });
+    return;
+  }
+  const m = u.message; if (!m) return;
+  // 2) Оплата прошла — записываем покупку
+  if (m.successful_payment) {
+    const sp = m.successful_payment, [item] = String(sp.invoice_payload || '').split(':');
+    if (ITEMS[item]) {
+      await db.prepare('INSERT OR IGNORE INTO purchases (charge, user_id, name, item, stars, ts) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(sp.telegram_payment_charge_id, m.from.id, cleanName(m.from.first_name), item, sp.total_amount, Date.now()).run();
+      memo = null;
+      await tg(env, 'sendMessage', { chat_id: m.chat.id, text: '⭐ Спасибо за покупку! «' + ITEMS[item].title + '» уже в игре.' });
+    }
+    return;
+  }
+  if (m.refunded_payment) {
+    await db.prepare('UPDATE purchases SET refunded = 1 WHERE charge = ?').bind(m.refunded_payment.telegram_payment_charge_id).run();
+    memo = null; return;
+  }
+  // 3) Команды бота
+  const text = String(m.text || '');
+  if (/^\/start\b/.test(text)) {
+    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: '🐰 Крути, собирай зайцев и попади в топ!', reply_markup: { inline_keyboard: [[{ text: 'Играть', web_app: { url: env.GAME_URL || GAME_URL_DEFAULT } }]] } });
+  } else if (/^\/paysupport\b/.test(text)) {
+    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Вопросы по покупкам за звёзды: напишите @' + String(env.ADMIN_USERNAME || 'zenix228') + ' — опишите, что купили и когда. Если покупка не появилась в игре, сначала перезапустите игру.' });
+  } else if (/^\/terms\b/.test(text)) {
+    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Покупки — это цифровые улучшения внутри игры. Игровые деньги нельзя вывести или обменять на реальные. Покупка привязана к вашему аккаунту Telegram. Возврат — через /paysupport.' });
+  }
+}
 async function ensure(db) {
   if (ready) return;
   await db.batch([
     db.prepare('CREATE TABLE IF NOT EXISTS top (id INTEGER PRIMARY KEY, k TEXT, name TEXT, lg REAL, money TEXT, best TEXT, rare INTEGER, ts INTEGER, banned INTEGER DEFAULT 0)'),
     db.prepare('CREATE INDEX IF NOT EXISTS top_lg ON top (banned, lg DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS top_k ON top (k)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS purchases (charge TEXT PRIMARY KEY, user_id INTEGER, name TEXT, item TEXT, stars INTEGER, ts INTEGER, refunded INTEGER DEFAULT 0)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS purchases_user ON purchases (user_id)'),
   ]);
   ready = true;
 }
@@ -67,10 +123,25 @@ export default {
     if (req.method === 'GET' && url.pathname === '/top') {
       // топ кэшируется в памяти на 15 секунд, чтобы не тратить лимит чтений базы
       if (!memo || Date.now() - memo.at > 15000) {
-        const { results } = await env.DB.prepare('SELECT k, name, lg, money, best, rare, ts FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?').bind(LIMIT).all();
+        const { results } = await env.DB.prepare(`SELECT k, name, lg, money, best, rare, ts,
+          EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold
+          FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?`).bind(LIMIT).all();
         memo = { rows: results, at: Date.now() };
       }
       return json(memo);
+    }
+
+    // Подключение оплат: Telegram будет присылать сюда счета и платежи (повторный вызов ничего не ломает)
+    if (req.method === 'GET' && url.pathname === '/setup') {
+      const r = await tg(env, 'setWebhook', { url: url.origin + '/tg-webhook', secret_token: await hookSecret(env), allowed_updates: ['message', 'pre_checkout_query'] });
+      await tg(env, 'setMyCommands', { commands: [{ command: 'start', description: 'Играть' }, { command: 'paysupport', description: 'Помощь с покупками' }, { command: 'terms', description: 'Условия покупок' }] });
+      return json({ webhook: r });
+    }
+    if (req.method === 'POST' && url.pathname === '/tg-webhook') {
+      if (req.headers.get('X-Telegram-Bot-Api-Secret-Token') !== await hookSecret(env)) return json({ error: 'forbidden' }, 403);
+      let u; try { u = await req.json(); } catch (e) { return json({ ok: true }); }
+      try { await onUpdate(u, env); } catch (e) { console.log('update error', e && e.message); }
+      return json({ ok: true });
     }
 
     if (req.method !== 'POST') return json({ error: 'not_found' }, 404);
@@ -94,14 +165,39 @@ export default {
       const saved = ((r.meta ? r.meta.changes : r.changes) || 0) > 0;
       if (saved) memo = null;
       const row = await env.DB.prepare('SELECT banned FROM top WHERE id = ?').bind(user.id).first();
-      return json({ ok: true, saved, k, admin, banned: !!(row && row.banned) });
+      return json({ ok: true, saved, k, admin, banned: !!(row && row.banned), items: await owned(env.DB, user.id) });
     }
 
-    if (url.pathname === '/me') return json({ ok: true, k, admin });
+    if (url.pathname === '/me') return json({ ok: true, k, admin, items: await owned(env.DB, user.id) });
+
+    // Счёт на оплату звёздами: игра открывает его через Telegram.WebApp.openInvoice
+    if (url.pathname === '/invoice') {
+      const item = String(body.item || ''), it = ITEMS[item];
+      if (!it) return json({ error: 'bad_item' }, 400);
+      if ((await owned(env.DB, user.id)).includes(item)) return json({ error: 'owned' }, 409);
+      const r = await tg(env, 'createInvoiceLink', { title: it.title, description: it.description, payload: item + ':' + user.id, currency: 'XTR', prices: [{ label: it.title, amount: it.price }] });
+      if (!r.ok) return json({ error: 'tg', detail: r.description }, 502);
+      return json({ ok: true, link: r.result });
+    }
 
     if (url.pathname === '/admin') {
       if (!admin) return json({ error: 'forbidden' }, 403);
       const tk = String(body.k || '');
+      if (body.action === 'purchases') {
+        const { results } = await env.DB.prepare('SELECT charge, user_id, name, item, stars, ts, refunded FROM purchases ORDER BY ts DESC LIMIT 100').all();
+        return json({ ok: true, rows: results });
+      }
+      if (body.action === 'refund') {
+        const p = await env.DB.prepare('SELECT charge, user_id, refunded FROM purchases WHERE charge = ?').bind(String(body.charge || '')).first();
+        if (!p) return json({ error: 'no_purchase' }, 404);
+        if (!p.refunded) {
+          const r = await tg(env, 'refundStarPayment', { user_id: p.user_id, telegram_payment_charge_id: p.charge });
+          if (!r.ok && !/ALREADY/i.test(r.description || '')) return json({ error: 'tg', detail: r.description }, 502);
+          await env.DB.prepare('UPDATE purchases SET refunded = 1 WHERE charge = ?').bind(p.charge).run();
+          memo = null;
+        }
+        return json({ ok: true });
+      }
       if (body.action === 'list_banned') {
         const { results } = await env.DB.prepare('SELECT k, name, lg, money FROM top WHERE banned = 1 ORDER BY lg DESC LIMIT 200').all();
         return json({ ok: true, rows: results });
