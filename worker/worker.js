@@ -40,7 +40,9 @@ async function checkInit(initData, token) {
   const at = Number(p.get('auth_date')) || 0;
   if (Date.now() / 1000 - at > MAX_AGE) return null;
   let u; try { u = JSON.parse(p.get('user') || 'null'); } catch (e) { return null; }
-  return u && u.id ? u : null;
+  if (!u || !u.id) return null;
+  u._start = String(p.get('start_param') || ''); // реф-код, если игру открыли по ссылке t.me/бот?startapp=…
+  return u;
 }
 
 // короткий публичный ключ игрока вместо его Telegram id
@@ -67,6 +69,42 @@ async function crowns(db) {
   const { results } = await db.prepare("SELECT user_id, MIN(ts) AS t FROM purchases WHERE item = 'gold' AND refunded = 0 GROUP BY user_id ORDER BY t LIMIT ?").bind(CROWNS).all();
   const rank = new Map(results.map((r, i) => [r.user_id, i + 1]));
   return { rank, left: Math.max(0, CROWNS - results.length) };
+}
+// ---- Рефералы: друг, впервые открывший игру по твоей ссылке, засчитывается тебе ----
+const REF_RAINBOW = 5;
+let botName = null;
+const botUser = async env => { if (!botName) { const r = await tg(env, 'getMe', {}); botName = r.ok ? r.result.username : ''; } return botName; };
+const refCount = async (db, uid) => ((await db.prepare('SELECT COUNT(*) AS n FROM players WHERE ref_by = ? AND ok = 1').bind(uid).first()) || {}).n || 0;
+// реф-код — это публичный ключ игрока (k), по нему находим пригласившего
+async function inviterOf(db, code, selfId) {
+  const m = /^r_([0-9a-f]{12})$/.exec(String(code || '')); if (!m) return null;
+  const inv = await db.prepare('SELECT id FROM players WHERE k = ?').bind(m[1]).first();
+  return inv && inv.id !== selfId ? inv.id : null;
+}
+// «новый» игрок — тот, кого сервер ещё ни разу не видел ни в игре, ни в топе
+const isNew = async (db, id) => !(await db.prepare('SELECT 1 FROM players WHERE id = ?').bind(id).first()) && !(await db.prepare('SELECT 1 FROM top WHERE id = ?').bind(id).first());
+async function refDone(env, inviter, friendName) {
+  const n = await refCount(env.DB, inviter);
+  const extra = n === REF_RAINBOW ? '\n🌈 Это пятый друг — твой ник в топе теперь радужный!' : n < REF_RAINBOW ? `\nДо радужного ника: ещё ${REF_RAINBOW - n}.` : '';
+  try { await tg(env, 'sendMessage', { chat_id: inviter, text: `🎉 ${friendName || 'Друг'} зашёл в игру по твоей ссылке! Друзей: ${n}, бонус к выплатам ×${(1 + 0.1 * Math.min(n, REF_CAP)).toFixed(1)}.${extra}` }); } catch (e) {}
+}
+const REF_CAP = 20; // больше 20 друзей бонус не растёт (×3.0) — защита от накрутки фейковыми аккаунтами
+// вызывается при каждом заходе игрока в игру
+async function touchPlayer(env, user, k) {
+  const db = env.DB, now = Date.now();
+  const p = await db.prepare('SELECT ref_by, ok, k FROM players WHERE id = ?').bind(user.id).first();
+  if (!p) {
+    const ref = (await isNew(db, user.id)) ? await inviterOf(db, user._start, user.id) : null;
+    await db.prepare('INSERT OR IGNORE INTO players (id, k, ref_by, ok, ts) VALUES (?, ?, ?, ?, ?)').bind(user.id, k, ref, ref ? 1 : 0, now).run();
+    if (ref) await refDone(env, ref, cleanName(user.first_name));
+  } else {
+    if (p.k !== k) await db.prepare('UPDATE players SET k = ? WHERE id = ?').bind(k, user.id).run();
+    if (p.ref_by && !p.ok) { await db.prepare('UPDATE players SET ok = 1 WHERE id = ?').bind(user.id).run(); await refDone(env, p.ref_by, cleanName(user.first_name)); }
+  }
+}
+async function refInfo(env, user, k) {
+  const n = await refCount(env.DB, user.id), bot = await botUser(env);
+  return { refs: n, refLink: bot ? `https://t.me/${bot}?start=r_${k}` : '' };
 }
 const owned = async (db, uid) => (await db.prepare('SELECT item FROM purchases WHERE user_id = ? AND refunded = 0').bind(uid).all()).results.map(r => r.item);
 
@@ -101,7 +139,14 @@ async function onUpdate(u, env) {
   // 3) Команды бота
   const text = String(m.text || '');
   if (/^\/start\b/.test(text)) {
-    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: '🐰 Крути, собирай зайцев и попади в топ!', reply_markup: { inline_keyboard: [[{ text: 'Играть', web_app: { url: env.GAME_URL || GAME_URL_DEFAULT } }]] } });
+    // /start r_<код> — пришёл по ссылке друга: запоминаем, засчитаем, когда он откроет игру
+    const code = text.split(/\s+/)[1] || '';
+    let invited = false;
+    if (code && await isNew(db, m.from.id)) {
+      const ref = await inviterOf(db, code, m.from.id);
+      if (ref) { await db.prepare('INSERT OR IGNORE INTO players (id, k, ref_by, ok, ts) VALUES (?, NULL, ?, 0, ?)').bind(m.from.id, ref, Date.now()).run(); invited = true; }
+    }
+    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: invited ? '🐰 Тебя позвал друг! Открой игру — и он получит бонус. Крути, собирай зайцев и попади в топ!' : '🐰 Крути, собирай зайцев и попади в топ!', reply_markup: { inline_keyboard: [[{ text: 'Играть', web_app: { url: env.GAME_URL || GAME_URL_DEFAULT } }]] } });
   } else if (/^\/paysupport\b/.test(text)) {
     await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Вопросы по покупкам за звёзды: напишите @' + String(env.ADMIN_USERNAME || 'zenix228') + ' — опишите, что купили и когда. Если покупка не появилась в игре, сначала перезапустите игру.' });
   } else if (/^\/terms\b/.test(text)) {
@@ -116,6 +161,9 @@ async function ensure(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS top_k ON top (k)'),
     db.prepare('CREATE TABLE IF NOT EXISTS purchases (charge TEXT PRIMARY KEY, user_id INTEGER, name TEXT, item TEXT, stars INTEGER, ts INTEGER, refunded INTEGER DEFAULT 0)'),
     db.prepare('CREATE INDEX IF NOT EXISTS purchases_user ON purchases (user_id)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY, k TEXT, ref_by INTEGER, ok INTEGER DEFAULT 0, ts INTEGER)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS players_k ON players (k)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS players_ref ON players (ref_by, ok)'),
   ]);
   ready = true;
 }
@@ -132,7 +180,8 @@ export default {
       // топ кэшируется в памяти на 15 секунд, чтобы не тратить лимит чтений базы
       if (!memo || Date.now() - memo.at > 15000) {
         const { results } = await env.DB.prepare(`SELECT id, k, name, lg, money, best, rare, ts,
-          EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold
+          EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold,
+          (SELECT COUNT(*) FROM players pl WHERE pl.ref_by = top.id AND pl.ok = 1) >= ${REF_RAINBOW} AS rainbow
           FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?`).bind(LIMIT).all();
         const c = await crowns(env.DB);
         memo = { rows: results.map(({ id, ...r }) => ({ ...r, crown: c.rank.get(id) || 0 })), crownsLeft: c.left, at: Date.now() };
@@ -160,6 +209,8 @@ export default {
     const k = await keyOf(user.id, env.BOT_TOKEN);
     const admin = String(user.username || '').toLowerCase() === String(env.ADMIN_USERNAME || 'zenix228').toLowerCase();
 
+    if (url.pathname === '/score' || url.pathname === '/me') await touchPlayer(env, user, k);
+
     if (url.pathname === '/score') {
       const lg = Number(body.lg);
       if (!isFinite(lg) || lg < -1 || lg > 1e9) return json({ error: 'bad_lg' }, 400);
@@ -175,10 +226,10 @@ export default {
       if (saved) memo = null;
       const row = await env.DB.prepare('SELECT banned FROM top WHERE id = ?').bind(user.id).first();
       const c = await crowns(env.DB);
-      return json({ ok: true, saved, k, admin, banned: !!(row && row.banned), items: await owned(env.DB, user.id), crown: c.rank.get(user.id) || 0, crownsLeft: c.left });
+      return json({ ok: true, saved, k, admin, banned: !!(row && row.banned), items: await owned(env.DB, user.id), crown: c.rank.get(user.id) || 0, crownsLeft: c.left, ...(await refInfo(env, user, k)) });
     }
 
-    if (url.pathname === '/me') { const c = await crowns(env.DB); return json({ ok: true, k, admin, items: await owned(env.DB, user.id), crown: c.rank.get(user.id) || 0, crownsLeft: c.left }); }
+    if (url.pathname === '/me') { const c = await crowns(env.DB); return json({ ok: true, k, admin, items: await owned(env.DB, user.id), crown: c.rank.get(user.id) || 0, crownsLeft: c.left, ...(await refInfo(env, user, k)) }); }
 
     // Счёт на оплату звёздами: игра открывает его через Telegram.WebApp.openInvoice
     if (url.pathname === '/invoice') {
