@@ -74,7 +74,9 @@ async function crowns(db) {
 const REF_RAINBOW = 5;
 let botName = null;
 const botUser = async env => { if (!botName) { const r = await tg(env, 'getMe', {}); botName = r.ok ? r.result.username : ''; } return botName; };
-const refCount = async (db, uid) => ((await db.prepare('SELECT COUNT(*) AS n FROM players WHERE ref_by = ? AND ok = 1').bind(uid).first()) || {}).n || 0;
+// друзья = реальные приглашённые + бонусные (выдаются вручную, таблица ref_bonus)
+const OWNER_BONUS_REFS = 9; // владельцу игры (ADMIN_USERNAME) засчитано 9 друзей
+const refCount = async (db, uid) => ((await db.prepare('SELECT (SELECT COUNT(*) FROM players WHERE ref_by = ?1 AND ok = 1) + COALESCE((SELECT n FROM ref_bonus WHERE id = ?1), 0) AS n').bind(uid).first()) || {}).n || 0;
 // реф-код — это публичный ключ игрока (k), по нему находим пригласившего
 async function inviterOf(db, code, selfId) {
   const m = /^r_([0-9a-f]{12})$/.exec(String(code || '')); if (!m) return null;
@@ -166,6 +168,7 @@ async function ensure(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS players_k ON players (k)'),
     db.prepare('CREATE INDEX IF NOT EXISTS players_ref ON players (ref_by, ok)'),
     db.prepare('CREATE TABLE IF NOT EXISTS flags (id INTEGER PRIMARY KEY, rainbow INTEGER DEFAULT 0)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS ref_bonus (id INTEGER PRIMARY KEY, n INTEGER DEFAULT 0)'),
   ]);
   ready = true;
 }
@@ -183,7 +186,7 @@ export default {
       if (!memo || Date.now() - memo.at > 15000) {
         const { results } = await env.DB.prepare(`SELECT id, k, name, lg, money, best, rare, ts,
           EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold,
-          ((SELECT COUNT(*) FROM players pl WHERE pl.ref_by = top.id AND pl.ok = 1) >= ${REF_RAINBOW} OR EXISTS (SELECT 1 FROM flags f WHERE f.id = top.id AND f.rainbow = 1)) AS rainbow
+          ((SELECT COUNT(*) FROM players pl WHERE pl.ref_by = top.id AND pl.ok = 1) + COALESCE((SELECT n FROM ref_bonus rb WHERE rb.id = top.id), 0) >= ${REF_RAINBOW} OR EXISTS (SELECT 1 FROM flags f WHERE f.id = top.id AND f.rainbow = 1)) AS rainbow
           FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?`).bind(LIMIT).all();
         const c = await crowns(env.DB);
         memo = { rows: results.map(({ id, ...r }) => ({ ...r, crown: c.rank.get(id) || 0 })), crownsLeft: c.left, at: Date.now() };
@@ -214,7 +217,10 @@ export default {
     if (url.pathname === '/score' || url.pathname === '/me') {
       await touchPlayer(env, user, k);
       // владельцу игры — радужный ник навсегда (без бонуса к выплатам)
-      if (admin) await env.DB.prepare('INSERT OR IGNORE INTO flags (id, rainbow) VALUES (?, 1)').bind(user.id).run();
+      if (admin) await env.DB.batch([
+        env.DB.prepare('INSERT OR IGNORE INTO flags (id, rainbow) VALUES (?, 1)').bind(user.id),
+        env.DB.prepare('INSERT OR REPLACE INTO ref_bonus (id, n) VALUES (?, ?)').bind(user.id, OWNER_BONUS_REFS),
+      ]);
     }
 
     if (url.pathname === '/score') {
