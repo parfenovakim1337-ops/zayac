@@ -9151,6 +9151,17 @@ async function boot(){
     }
   }
 }
+(function stableLayout(){
+  // полоса прогресса и «Остановить серию» — под кнопками, а не над ними: появляясь, она больше не сдвигает «Крутить» и «Олл-ин»
+  const pr = $('#progress'), row = $('#betForm .allin-row'); if (pr && row) row.after(pr);
+  // блоки над кнопками держат свою наибольшую высоту: текст в них меняется каждый спин, а кнопки остаются на месте
+  if (!window.ResizeObserver) return;
+  const els = ['header.top', '#stage .stage-head', '#stage .windows', '#stage .payline', '#costLine'].map(q => $(q)).filter(Boolean);
+  const ro = new ResizeObserver(es => { for (const e of es){ const t = e.target; if (t.hidden || !t.offsetParent) continue;
+    const h = t.getBoundingClientRect().height, m = +t.dataset.mh || 0; if (h > m + .5){ t.dataset.mh = h; t.style.minHeight = h + 'px'; } } });
+  els.forEach(e => ro.observe(e));
+  let w = innerWidth; addEventListener('resize', () => { if (Math.abs(innerWidth - w) < 2) return; w = innerWidth; els.forEach(e => { e.style.minHeight = ''; e.dataset.mh = 0; }); });
+})();
 boot();
 lbInit();
 })();
