@@ -1,3 +1,11 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0b">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Rabbit Slots</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6841,7 +6849,8 @@ sfxBtn.addEventListener('click', () => { state.settings.sfx = state.settings.sfx
 // Тихий щелчок на любую кнопку, вкладку и выпадающий список
 document.addEventListener('click', e => { const b = e.target.closest('button, select'); if (b && !b.disabled && b.id !== 'spinBtn') Music.sfx('click'); }, true);
 // На iPhone Web Audio молчит в беззвучном режиме — просим браузер играть звук как музыку.
-try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
+try { if (navigator.audioSession) navigator.audioSession.type = window.TGW ? 'ambient' : 'playback'; } catch(e){}
+try { if (window.TGW && 'mediaSession' in navigator && window.MediaMetadata) navigator.mediaSession.metadata = new MediaMetadata({ title: 'Зайцы', artist: 'Telegram', artwork: [{ src: 'icon.png', sizes: '512x512', type: 'image/png' }] }); } catch(e){}
 ['pointerdown', 'touchend', 'keydown', 'click'].forEach(ev => document.addEventListener(ev, () => { if (state.settings.sfx !== false || Music.playing) Music.unlock(); }, { capture: true, passive: true }));
 
 /* ================= КЕЙС С АКСЕССУАРАМИ ================= */
