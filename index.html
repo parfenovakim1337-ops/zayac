@@ -7526,7 +7526,7 @@ async function tgInit(){
   if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000); }
 }
 /* ---- общий топ через свой сервер (Cloudflare Worker) ---- */
-const TOP_API = '';              // адрес сервера топа, например https://zayac-top.xxx.workers.dev
+const TOP_API = 'https://zayac-top.parfenov-akim1337.workers.dev';
 const TG_OWNER = 'zenix228';     // владелец игры: видит админку и может скрывать игроков из топа
 const tgName = () => (state.settings.nick || (window.TGU && window.TGU.first_name) || 'Игрок').replace(/\s+/g, ' ').trim().slice(0, 20);
 const tgPost = async (path, body) => { const r = await fetch(TOP_API + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ initData: window.TGW.initData }, body)) }); return r.json(); };
