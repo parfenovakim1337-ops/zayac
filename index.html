@@ -1551,6 +1551,17 @@ details.more .stats{margin-top:8px}
 .cine-3d .c17-glow,.cine-3d .c17-pl{transform-style:preserve-3d}
 html.tg body{ padding-top: var(--tg-content-safe-area-inset-top, 0px); padding-bottom: var(--tg-safe-area-inset-bottom, 0px); overscroll-behavior: none; }
 html.tg .lb-gold{ background:linear-gradient(90deg,#ffe08a,#ffb020 45%,#fff3c4 70%,#ffb020); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:800; }
+html.tg .lb-crown{ margin-right:4px; font-size:15px; filter:drop-shadow(0 0 4px rgba(255,200,60,.55)); }
+html.tg .lb-star{ position:relative; display:inline-block; }
+html.tg .lb-star .lb-gold{ background-size:220% 100%; animation:lbShine 2.6s linear infinite; text-shadow:none; }
+html.tg .lb-star i{ position:absolute; font-style:normal; font-size:10px; line-height:1; color:#ffe9a0; text-shadow:0 0 6px #ffcf4a,0 0 12px #ffb020; pointer-events:none; animation:lbTw 1.8s ease-in-out infinite; font-size:13px; }
+html.tg .lb-star i:nth-of-type(1){ left:-9px; top:-7px; }
+html.tg .lb-star i:nth-of-type(2){ right:-10px; top:-4px; animation-delay:.6s; font-size:10px; }
+html.tg .lb-star i:nth-of-type(3){ right:20%; bottom:-9px; animation-delay:1.2s; font-size:11px; }
+@keyframes lbTw{ 0%,100%{ opacity:0; transform:scale(.3) rotate(0deg); } 50%{ opacity:1; transform:scale(1.15) rotate(90deg); } }
+@keyframes lbShine{ to{ background-position:-220% 0; } }
+@media (prefers-reduced-motion: reduce){ html.tg .lb-star i, html.tg .lb-star .lb-gold{ animation:none; } }
+html.tg .tg-crowns{ font-size:12px; color:var(--gold, #ffb020); margin-top:4px; }
 html.tg .tg-shop{ display:grid; gap:10px; margin-top:6px; }
 html.tg .tg-item{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--line); border-radius:12px; }
 html.tg .tg-item > div{ display:grid; gap:2px; } html.tg .tg-item .muted{ font-size:12px; }
@@ -7578,21 +7589,21 @@ async function tgTopPush(force){
   const key = [b.lg, b.nick, b.best, b.rare].join('|');
   if (!force && (key === tgSent || Date.now() - tgPushAt < 55000)) return; // не чаще раза в минуту и только если что-то изменилось
   tgPushBusy = true;
-  try { const d = await tgPost('/score', b); if (d && d.ok){ if (Array.isArray(d.items)) tgSetItems(d.items); const first = !LB.me, wasAdm = LB.admin; LB.me = d.k; LB.admin = !!d.admin; LB.banned = !!d.banned; if (wasAdm !== LB.admin) tgShopRender(); if (d.saved !== false){ tgSent = key; tgPushAt = Date.now(); } else setTimeout(() => tgTopPush(true), 6000); if (first || d.saved !== false) tgTopLoad(); else renderTopIfOpen(); } }
+  try { const d = await tgPost('/score', b); if (d && d.ok){ tgCrown(d); if (Array.isArray(d.items)) tgSetItems(d.items); const first = !LB.me, wasAdm = LB.admin; LB.me = d.k; LB.admin = !!d.admin; LB.banned = !!d.banned; if (wasAdm !== LB.admin) tgShopRender(); if (d.saved !== false){ tgSent = key; tgPushAt = Date.now(); } else setTimeout(() => tgTopPush(true), 6000); if (first || d.saved !== false) tgTopLoad(); else renderTopIfOpen(); } }
   catch(e){} finally { tgPushBusy = false; }
 }
 async function tgTopLoad(){
   if (!TOP_API) return;
   try {
     const d = await (await fetch(TOP_API + '/top')).json();
-    LB.rows = (d.rows || []).map(x => { const r = lbClean(x.k, Object.assign({}, x, { nick: x.name })); if (r) r.gold = !!x.gold; return r; }).filter(Boolean);
-    LB.rows.forEach(r => keepNick(r.nick)); LB.status = 'live'; LB.err = '';
+    LB.rows = (d.rows || []).map(x => { const r = lbClean(x.k, Object.assign({}, x, { nick: x.name })); if (r){ r.gold = !!x.gold; r.crown = x.crown | 0; } return r; }).filter(Boolean);
+    LB.rows.forEach(r => keepNick(r.nick)); LB.status = 'live'; LB.err = ''; if (typeof d.crownsLeft === 'number' && d.crownsLeft !== LB.crownsLeft){ LB.crownsLeft = d.crownsLeft; tgShopRender(); }
   } catch(e){ if (LB.status !== 'live'){ LB.status = 'error'; LB.err = 'Не удалось загрузить топ. Попробуйте позже.'; } }
   renderTopIfOpen();
 }
 function tgTopHead(){
   keepNick(tgName());
-  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} <b translate="no"${tgHas('gold') ? ' class="lb-gold"' : ''}>${esc(tgName())}</b></span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
+  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} ${tgNameHTML({ gold: tgHas('gold'), crown: LB.myCrown || 0 }, tgName())}</span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
 }
 function tgTopAfter(root){
   const nb = $('#lbNick', root); if (nb) nb.onclick = () => openModal({ title: 'Ник в топе', body: `<p class="muted">От 3 до 16 символов: буквы, цифры, пробел, _ и -. Пусто — будет имя из Telegram.</p><input class="input" id="tgNick" maxlength="16" autocomplete="off" value="${esc(state.settings.nick || '')}">`,
@@ -7627,7 +7638,19 @@ function tgSetItems(arr){
   LB.items = new Set(now); try { localStorage.setItem(tgItemsKey(), JSON.stringify(now)); } catch(e){}
   if (was !== now.join()){ syncAuto(); tgShopRender(); renderTopIfOpen(); }
 }
-async function tgMe(){ try { const d = await tgPost('/me', {}); if (d && d.ok){ LB.admin = !!d.admin; if (Array.isArray(d.items)) tgSetItems(d.items); } } catch(e){} }
+async function tgMe(){ try { const d = await tgPost('/me', {}); if (d && d.ok){ LB.admin = !!d.admin; tgCrown(d); if (Array.isArray(d.items)) tgSetItems(d.items); } } catch(e){} }
+function tgCrown(d){
+  let ch = false;
+  if (typeof d.crown === 'number' && d.crown !== LB.myCrown){ LB.myCrown = d.crown; ch = true; }
+  if (typeof d.crownsLeft === 'number' && d.crownsLeft !== LB.crownsLeft){ LB.crownsLeft = d.crownsLeft; ch = true; }
+  if (ch){ tgShopRender(); renderTopIfOpen(); }
+}
+// имя игрока: корона у первых 10 покупателей золотого ника, у самого первого — ещё и звёздочки
+function tgNameHTML(r, nm){
+  const b = `<b translate="no"${r.gold ? ' class="lb-gold"' : ''}>${esc(nm || lbName(r))}</b>`;
+  const crown = r.crown ? `<span class="lb-crown" title="${r.crown === 1 ? 'Первый покупатель золотого ника' : 'Один из первых 10 покупателей золотого ника'}">👑</span>` : '';
+  return crown + (r.crown === 1 ? `<span class="lb-star">${b}<i>✦</i><i>✦</i><i>✧</i></span>` : b);
+}
 const autoAllLabel = () => OWNER ? 'Авто олл-ин · админ' : tgHas('autoall') ? 'Авто олл-ин' : 'Авто олл-ин · ⭐ ' + TG_ITEMS.autoall.price;
 function tgOffer(item){
   const it = TG_ITEMS[item]; if (!it) return;
@@ -7655,7 +7678,8 @@ function tgShopRender(){
   const box = $('#tgShop'); if (!box) return;
   box.hidden = !TOP_API;
   const list = $('#tgShopList', box); if (!list) return;
-  list.innerHTML = Object.entries(TG_ITEMS).map(([id, it]) => `<div class="tg-item"><div><b>${esc(it.title)}</b><span class="muted">${esc(it.desc)}</span></div>${tgHas(id) ? '<span class="tg-own">✓ Куплено</span>' : `<button class="btn" type="button" data-buy="${id}">⭐ ${it.price}</button>`}</div>`).join('')
+  const crownLine = id => id !== 'gold' || typeof LB.crownsLeft !== 'number' ? '' : LB.crownsLeft > 0 ? `<span class="tg-crowns">👑 Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки ✨ Осталось корон: <b>${LB.crownsLeft} из 10</b></span>` : '<span class="tg-crowns">👑 Все 10 корон уже разобраны</span>';
+  list.innerHTML = Object.entries(TG_ITEMS).map(([id, it]) => `<div class="tg-item"><div><b>${esc(it.title)}</b><span class="muted">${esc(it.desc)}</span>${crownLine(id)}</div>${tgHas(id) ? '<span class="tg-own">✓ Куплено</span>' : `<button class="btn" type="button" data-buy="${id}">⭐ ${it.price}</button>`}</div>`).join('')
     + (LB.admin ? '<button class="btn ghost" type="button" id="tgPurch">Покупки игроков · админ</button>' : '');
   $$('[data-buy]', list).forEach(b => b.onclick = () => tgBuy(b.dataset.buy));
   const pb = $('#tgPurch', list); if (pb) pb.onclick = tgPurchases;
@@ -7676,7 +7700,7 @@ window.TG_EN = { 'В топе как': 'In the top as', 'Вы скрыты из 
   'Не удалось загрузить топ. Попробуйте позже.': "Couldn't load the top. Try again later.",
   'Ваш результат обновляется сам раз в минуту, когда меняется.': 'Your result updates itself once a minute when it changes.',
   'Авто олл-ин навсегда': 'Auto all-in forever', 'Золотой ник в топе': 'Golden name in the top', 'Игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп».': 'The game bets your whole balance series after series until you press “Stop”.',
-  'Ваше имя в общем топе горит золотом.': 'Your name shines gold in the top.', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
+  'Ваше имя в общем топе горит золотом.': 'Your name shines gold in the top.', 'Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки': 'The first 10 buyers get a crown by their name, the very first one also gets sparkles', 'Осталось корон:': 'Crowns left:', 'из 10': 'of 10', 'Все 10 корон уже разобраны': 'All 10 crowns are taken', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
   'Покупка навсегда и на всех устройствах с вашим Telegram. Оплата звёздами Telegram.': 'Yours forever, on every device with your Telegram. Paid with Telegram Stars.',
   'Уже куплено': 'Already purchased', 'Оплата сейчас недоступна': 'Payment is unavailable right now', 'Попробуйте чуть позже.': 'Please try a bit later.', 'Оплачено': 'Paid', 'Спасибо! Включаю покупку…': 'Thanks! Activating your purchase…',
   'Готово!': 'Done!', 'уже в игре.': 'is now in the game.', 'Покупка обрабатывается': 'Purchase is processing', 'Перезапустите игру через минуту. Если не появится — команда /paysupport в боте.': 'Restart the game in a minute. If it doesn’t appear, use /paysupport in the bot.',
@@ -7750,7 +7774,7 @@ function renderTop(){
   // Кто не может записать себя в общий топ, видит свою строку локально — на том месте, где был бы
   let rows = LB.rows;
   if (LB.status === 'live' && (window.TGW ? (!LB.me || LB.banned) : (!AC.on || AC.local))){
-    const b = lbBody(); rows = rows.concat([{ id: '__me', lg: b.lg, money: myMoney, best: b.best !== '0' ? new D(b.best) : null, rare: b.rare, gold: !!(window.TGW && tgHas('gold')), nick: window.TGW ? tgName() : AC.on ? AC.nick : 'Вы (гость)', ts: Date.now(), local: true }]).sort((x, y) => y.lg - x.lg);
+    const b = lbBody(); rows = rows.concat([{ id: '__me', lg: b.lg, money: myMoney, best: b.best !== '0' ? new D(b.best) : null, rare: b.rare, gold: !!(window.TGW && tgHas('gold')), crown: window.TGW ? LB.myCrown || 0 : 0, nick: window.TGW ? tgName() : AC.on ? AC.nick : 'Вы (гость)', ts: Date.now(), local: true }]).sort((x, y) => y.lg - x.lg);
   }
   const myIdx = rows.findIndex(r => r.id === me);
   const head = `<div class="shop-head"><div><h2>Лидерборд</h2><p class="muted">Топ-${LB_LIMIT} игроков по балансу. ${window.TGW ? 'Ваш результат обновляется сам раз в минуту, когда меняется.' : 'Ваш результат обновляется сам каждые 20 секунд, когда меняется.'}</p></div>
@@ -7762,7 +7786,7 @@ function renderTop(){
   else if (!rows.length) body = '<div class="empty"><p><b>В топе пока никого.</b></p><p>Сыграйте — и станьте первым.</p></div>';
   else body = `<ol class="lb">${rows.map((r, i) => { const mine = r.id === me || r.local, medal = i < 3 ? ['🥇', '🥈', '🥉'][i] : '';
       return `<li data-k="${esc(r.id)}" class="lb-row${mine ? ' me' : ''}${i < 3 ? ' top' + (i + 1) : ''}"><span class="lb-rank">${medal || i + 1}</span><span class="glyph">${rabbitSVG(r.rare)}</span>
-        <span class="lb-who"><span><b${r.nick || LB.names[r.id] ? ' translate="no"' : ''}${r.gold ? ' class="lb-gold"' : ''}>${esc(lbName(r))}</b>${mine ? ' <span class="lb-you">вы</span>' : ''}${r.local ? ' <span class="lb-loc">видно только вам</span>' : ''}</span><span class="sb">${r.rare >= 0 ? 'титул «' + esc(TITLES[r.rare] ? TITLES[r.rare].name : '') + '» · ' : ''}${r.best && r.best.gt(0) ? 'рекорд ' + fmtMult(r.best) + ' · ' : ''}${agoText(r.ts)}</span></span>
+        <span class="lb-who"><span>${window.TGW ? tgNameHTML(r) : `<b${r.nick || LB.names[r.id] ? ' translate="no"' : ''}>${esc(lbName(r))}</b>`}${mine ? ' <span class="lb-you">вы</span>' : ''}${r.local ? ' <span class="lb-loc">видно только вам</span>' : ''}</span><span class="sb">${r.rare >= 0 ? 'титул «' + esc(TITLES[r.rare] ? TITLES[r.rare].name : '') + '» · ' : ''}${r.best && r.best.gt(0) ? 'рекорд ' + fmtMult(r.best) + ' · ' : ''}${agoText(r.ts)}</span></span>
         <span class="lb-money">${fmtMoney(r.money)}</span></li>`; }).join('')}</ol>`;
   const mine = LB.status === 'live' && (window.TGW ? !!LB.me : AC.on && !AC.local) && myIdx < 0 && rows.length >= LB_LIMIT ? `<p class="note">Вас пока нет в топ-${LB_LIMIT}: у вас ${fmtMoney(myMoney)}, нужно больше ${fmtMoney(rows[rows.length - 1].money)}.</p>` : '';
   const ro = !window.TGW && LB.status === 'live' && !AC.on && acctCloud() ? '<p class="note">Вы играете как гость: ваша строка ниже видна только вам. Создайте аккаунт — и попадёте в общий топ под своим ником.</p>' : LB.status === 'live' && (LB.ro || !LB.uid) ? `<p class="note">${LB.err ? esc(LB.err) : 'Ваш результат не попадает в общий топ: у вашего доступа к игре нет права записи (так бывает, если вы открыли игру по общей ссылке не из организации владельца). Ваша строка ниже видна только вам. Чтобы попасть в топ, попросите владельца игры пригласить вас через «Поделиться».'}</p>` : '';

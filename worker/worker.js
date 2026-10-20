@@ -52,7 +52,7 @@ let ready = false, memo = null;
 // Товары за звёзды. Цена — в звёздах (XTR). Меняя цену здесь, поменяйте её и в игре (TG_ITEMS).
 const ITEMS = {
   autoall: { title: 'Авто олл-ин навсегда', description: 'Кнопка «Авто олл-ин»: игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп». Покупка навсегда, на всех устройствах.', price: 149 },
-  gold: { title: 'Золотой ник в топе', description: 'Ваше имя в общем топе горит золотом. Покупка навсегда.', price: 49 },
+  gold: { title: 'Золотой ник в топе', description: 'Ваше имя в общем топе горит золотом. Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки. Покупка навсегда.', price: 49 },
 };
 const GAME_URL_DEFAULT = 'https://parfenovakim1337-ops.github.io/zayac/';
 const tg = async (env, method, params) => {
@@ -60,6 +60,14 @@ const tg = async (env, method, params) => {
   return r.json();
 };
 const hookSecret = async env => hex(await hmac(env.BOT_TOKEN, 'webhook')).slice(0, 48);
+// Первые 10 покупателей золотого ника получают корону, самый первый — ещё и звёздочки.
+// Считаются только не возвращённые покупки: если кто-то вернул звёзды, его место переходит дальше.
+const CROWNS = 10;
+async function crowns(db) {
+  const { results } = await db.prepare("SELECT user_id, MIN(ts) AS t FROM purchases WHERE item = 'gold' AND refunded = 0 GROUP BY user_id ORDER BY t LIMIT ?").bind(CROWNS).all();
+  const rank = new Map(results.map((r, i) => [r.user_id, i + 1]));
+  return { rank, left: Math.max(0, CROWNS - results.length) };
+}
 const owned = async (db, uid) => (await db.prepare('SELECT item FROM purchases WHERE user_id = ? AND refunded = 0').bind(uid).all()).results.map(r => r.item);
 
 async function onUpdate(u, env) {
@@ -123,10 +131,11 @@ export default {
     if (req.method === 'GET' && url.pathname === '/top') {
       // топ кэшируется в памяти на 15 секунд, чтобы не тратить лимит чтений базы
       if (!memo || Date.now() - memo.at > 15000) {
-        const { results } = await env.DB.prepare(`SELECT k, name, lg, money, best, rare, ts,
+        const { results } = await env.DB.prepare(`SELECT id, k, name, lg, money, best, rare, ts,
           EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold
           FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?`).bind(LIMIT).all();
-        memo = { rows: results, at: Date.now() };
+        const c = await crowns(env.DB);
+        memo = { rows: results.map(({ id, ...r }) => ({ ...r, crown: c.rank.get(id) || 0 })), crownsLeft: c.left, at: Date.now() };
       }
       return json(memo);
     }
@@ -165,10 +174,11 @@ export default {
       const saved = ((r.meta ? r.meta.changes : r.changes) || 0) > 0;
       if (saved) memo = null;
       const row = await env.DB.prepare('SELECT banned FROM top WHERE id = ?').bind(user.id).first();
-      return json({ ok: true, saved, k, admin, banned: !!(row && row.banned), items: await owned(env.DB, user.id) });
+      const c = await crowns(env.DB);
+      return json({ ok: true, saved, k, admin, banned: !!(row && row.banned), items: await owned(env.DB, user.id), crown: c.rank.get(user.id) || 0, crownsLeft: c.left });
     }
 
-    if (url.pathname === '/me') return json({ ok: true, k, admin, items: await owned(env.DB, user.id) });
+    if (url.pathname === '/me') { const c = await crowns(env.DB); return json({ ok: true, k, admin, items: await owned(env.DB, user.id), crown: c.rank.get(user.id) || 0, crownsLeft: c.left }); }
 
     // Счёт на оплату звёздами: игра открывает его через Telegram.WebApp.openInvoice
     if (url.pathname === '/invoice') {
