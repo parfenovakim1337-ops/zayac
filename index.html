@@ -25,7 +25,12 @@
   var n = 0, API = 'https://zayac-top.parfenov-akim1337.workers.dev';
   function rep(msg, src, line, col, stack){ if (n++ >= 3 || location.protocol === 'file:') return;
     try { fetch(API + '/err', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ msg: String(msg).slice(0, 300), src: String(src || '').slice(-80), line: line, col: col, stack: String(stack || '').slice(0, 600), ua: navigator.userAgent, tg: window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.version, lang: navigator.language }) }); } catch(e){} }
-  window.addEventListener('error', function(e){ rep(e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack); });
+  // если игра упала ещё до запуска — показываем ошибку на экране, чтобы игрок мог прислать скриншот
+  function show(msg, line, stack){ if (window.__booted) return; try {
+    var d = document.getElementById('bootErr'); if (!d){ d = document.createElement('div'); d.id = 'bootErr'; d.style.cssText = 'position:fixed;left:10px;right:10px;bottom:10px;z-index:99999;background:#7f1d1d;color:#fff;font:13px/1.4 system-ui,sans-serif;padding:12px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);white-space:pre-wrap;word-break:break-word;max-height:45vh;overflow:auto'; (document.body || document.documentElement).appendChild(d); }
+    d.textContent = '⚠️ Игра не запустилась. Пришли скриншот этого окна разработчику.\n\n' + String(msg).slice(0, 300) + (line ? ' (строка ' + line + ')' : '') + '\n' + String(stack || '').split('\n').slice(0, 4).join('\n') + '\n\n' + navigator.userAgent.slice(0, 160);
+  } catch(e){} }
+  window.addEventListener('error', function(e){ rep(e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack); if (e.message) setTimeout(function(){ show(e.message, e.lineno, e.error && e.error.stack); }, 300); });
   window.addEventListener('unhandledrejection', function(e){ var r = e.reason || {}; rep('unhandled: ' + (r.message || r), '', 0, 0, r.stack); });
 })();
 (function(){
@@ -9820,5 +9825,6 @@ async function boot(){
 })();
 boot();
 lbInit();
+window.__booted = true;
 })();
 </script>

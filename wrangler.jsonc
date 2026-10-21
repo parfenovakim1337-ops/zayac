@@ -6,6 +6,7 @@
   "compatibility_date": "2025-01-01",
   "workers_dev": true,
   "keep_vars": true,
+  "observability": { "enabled": true },
   "d1_databases": [
     { "binding": "DB", "database_name": "zayac-top", "database_id": "9761d115-e751-46c0-9401-62a828bef5d4" }
   ]
