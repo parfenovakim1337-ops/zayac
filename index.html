@@ -23,6 +23,7 @@
   document.documentElement.classList.add('tg');
   try { W.ready(); W.expand(); } catch(e){}
   try { if (W.isVersionAtLeast && W.isVersionAtLeast('7.7')) W.disableVerticalSwipes(); } catch(e){}
+  try { if (W.isVersionAtLeast && W.isVersionAtLeast('6.2')) W.enableClosingConfirmation(); } catch(e){}
 })();
 </script>
 <style>
@@ -7608,7 +7609,10 @@ async function tgInit(){
   try { W.onEvent('deactivated', () => { save(); cloudPush(false); }); } catch(e){}
   if (!(TGCS() && W.isVersionAtLeast('6.9'))){ CL.ro = true; return; }
   await cloudInit();
-  if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000); }
+  if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000);
+    // ссылка-вызов на шахматы: ?chess=<id> или startapp=chess_<id>
+    const sp = (window.TGW.initDataUnsafe && window.TGW.initDataUnsafe.start_param) || '', q = new URLSearchParams(location.search).get('chess') || (/^chess_([0-9a-f]{12})$/.exec(sp) || [])[1];
+    if (q && /^[0-9a-f]{12}$/.test(q)) setTimeout(() => chFromLink(q), 600); }
 }
 /* ---- общий топ через свой сервер (Cloudflare Worker) ---- */
 const TOP_API = 'https://zayac-top.parfenov-akim1337.workers.dev';
@@ -7680,7 +7684,7 @@ function tgCrown(d){
   if (typeof d.rainbow === 'boolean' && d.rainbow !== LB.myRainbow){ LB.myRainbow = d.rainbow; ch = true; }
   // шахматы пока только для владельца и его приглашённых: вкладку показывает сервер
   if (typeof d.chess === 'boolean' && d.chess !== LB.chessOk){ LB.chessOk = d.chess; const cb = $('#tb-chess'); if (cb) cb.hidden = !d.chess;
-    if (d.chess){ chList(); if (location.hash === '#chess' || (window.TGW.initDataUnsafe && window.TGW.initDataUnsafe.start_param === 'chess')) showTab('chess'); } }
+    if (d.chess){ chList(); if (!CH.deep && (new URLSearchParams(location.search).get('open') === 'chess' || (window.TGW.initDataUnsafe && window.TGW.initDataUnsafe.start_param === 'chess'))){ CH.deep = 1; showTab('chess'); } } }
   if (ch) tgRefRender();
   if (typeof d.crown === 'number' && d.crown !== LB.myCrown){ LB.myCrown = d.crown; ch = true; }
   if (typeof d.crownsLeft === 'number' && d.crownsLeft !== LB.crownsLeft){ LB.crownsLeft = d.crownsLeft; ch = true; }
@@ -7768,7 +7772,7 @@ window.TG_EN = { 'В топе как': 'In the top as', 'Вы скрыты из 
   'Вызов на шахматы': 'Chess challenge', 'вызывает тебя': 'challenges you', 'Ставка:': 'Stake:', 'Вызов отправлен': 'Challenge sent', 'получит приглашение': 'will get an invite', 'отложена до конца партии': 'is held until the game ends', 'Ход не прошёл': 'Move failed',
   'Победа!': 'Victory!', 'Партия с': 'Game with', 'Выигрыш:': 'Winnings:', 'Ставка вернулась': 'Stake returned', 'ушла сопернику': 'went to the opponent', 'Не хватает денег': 'Not enough money', 'Не получилось': 'Didn’t work',
   'Впиши юзернейм соперника из Telegram, например @durov.': 'Enter your opponent’s Telegram username, e.g. @durov.', 'Впиши ставку больше нуля.': 'Enter a stake above zero.', 'Себя вызвать нельзя 🙂': 'You can’t challenge yourself 🙂',
-  'Нет связи с сервером. Попробуй ещё раз.': 'No connection to the server. Try again.', 'Лучший ход': 'Best move', 'Думаю…': 'Thinking…', 'видно только админу': 'visible to admin only', 'глубина': 'depth', 'ведёт к мату': 'leads to mate', 'мат неизбежен': 'mate is unavoidable', 'Шахматы пока закрыты.': 'Chess is closed for now.', 'Скопировать ссылку': 'Copy link', 'Ссылка скопирована': 'Link copied', 'Ваша ссылка': 'Your link', 'Отправьте её друзьям.': 'Send it to your friends.', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
+  'Нет связи с сервером. Попробуй ещё раз.': 'No connection to the server. Try again.', 'Лучший ход': 'Best move', 'Думаю…': 'Thinking…', 'видно только админу': 'visible to admin only', 'глубина': 'depth', 'ведёт к мату': 'leads to mate', 'мат неизбежен': 'mate is unavoidable', 'Шахматы пока закрыты.': 'Chess is closed for now.', 'Вызов по ссылке — для любого друга': 'Challenge via link — for any friend', 'Поделиться': 'Share', 'по ссылке': 'via link', 'вызывает тебя на партию.': 'challenges you to a game.', 'победитель забирает обе.': 'the winner takes both.', 'Принять вызов': 'Accept challenge', 'Вызов не найден': 'Challenge not found', 'Вызов уже недоступен': 'Challenge no longer available', 'Шахматы пока закрытые': 'Chess is invite-only for now', 'Ссылка на вызов': 'Challenge link', 'Скопировать ссылку': 'Copy link', 'Ссылка скопирована': 'Link copied', 'Ваша ссылка': 'Your link', 'Отправьте её друзьям.': 'Send it to your friends.', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
   'Покупка навсегда и на всех устройствах с вашим Telegram. Оплата звёздами Telegram.': 'Yours forever, on every device with your Telegram. Paid with Telegram Stars.',
   'Уже куплено': 'Already purchased', 'Оплата сейчас недоступна': 'Payment is unavailable right now', 'Попробуйте чуть позже.': 'Please try a bit later.', 'Оплачено': 'Paid', 'Спасибо! Включаю покупку…': 'Thanks! Activating your purchase…',
   'Готово!': 'Done!', 'уже в игре.': 'is now in the game.', 'Покупка обрабатывается': 'Purchase is processing', 'Перезапустите игру через минуту. Если не появится — команда /paysupport в боте.': 'Restart the game in a minute. If it doesn’t appear, use /paysupport in the bot.',
@@ -8013,11 +8017,18 @@ async function chList(){
   if (!TOP_API || !LB.chessOk) return;
   let d; try { d = await tgPost('/chess/list', {}); } catch(e){ return; }
   if (!d || !d.ok) return;
+  const sig = JSON.stringify(d.games || []), same = sig === CH.sig; CH.sig = sig;
   CH.games = d.games || []; CH.loaded = true;
   // новые вызовы — уведомление
   CH.games.filter(g => g.status === 'pending' && !g.mine).forEach(g => { if (!CH.seen.has(g.id)){ CH.seen.add(g.id); if (CH.loaded) { toast('♟ Вызов на шахматы', `${g.opp} вызывает тебя`, `Ставка: ${g.label || fmtMoney(g.stake)}`); Music.sfx('pop'); } } });
   await chSettleAll(); chBadge();
-  if (chOpen() && !CH.view) renderChess();
+  if (chOpen() && !CH.view && !same) chRenderSafe();
+}
+// перерисовка, которая не сбивает ввод: пока в поле печатают, ждём, пока поле отпустят
+function chRenderSafe(){
+  const root = $('#tab-chess'), ae = document.activeElement;
+  if (root && ae && root.contains(ae) && /INPUT|TEXTAREA/.test(ae.tagName)){ if (!ae.dataset.chw){ ae.dataset.chw = '1'; ae.addEventListener('blur', () => setTimeout(() => { if (!CH.view && chOpen() && !(document.activeElement && root.contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) renderChess(); }, 50), { once: true }); } return; }
+  renderChess();
 }
 function chBadge(){
   const n = CH.games.filter(g => (g.status === 'pending' && !g.mine) || (g.status === 'active' && g.turn === g.me)).length;
@@ -8054,9 +8065,10 @@ function renderChess(){
   chDefs();
   if (CH.view) return renderChessGame(root);
   const best = chBest(), bal = balance();
-  const pend = CH.games.filter(g => g.status === 'pending'), inc = pend.filter(g => !g.mine), out = pend.filter(g => g.mine);
+  const keepU = ($('#chUser', root) || {}).value || '', keepS = ($('#chStake', root) || {}).value || '';
+  const pend = CH.games.filter(g => g.status === 'pending' || g.status === 'open'), inc = pend.filter(g => !g.mine), out = pend.filter(g => g.mine);
   const act = CH.games.filter(g => g.status === 'active'), fin = CH.games.filter(g => !['pending', 'active'].includes(g.status)).slice(0, 8);
-  const row = (g, right) => `<li class="ch-row"><span class="ch-mini">${chPieceSVG(g.me === 'w' ? 'K' : 'k', g.myStyle != null ? g.myStyle : best)}<i>vs</i>${chPieceSVG(g.me === 'w' ? 'k' : 'K', g.oppStyle || 0)}</span><span class="ch-who"><b translate="no">${esc(g.opp)}</b><span class="sb">${right}</span></span>`;
+  const row = (g, right) => `<li class="ch-row"><span class="ch-mini">${chPieceSVG(g.me === 'w' ? 'K' : 'k', g.myStyle != null ? g.myStyle : best)}<i>vs</i>${chPieceSVG(g.me === 'w' ? 'k' : 'K', g.oppStyle || 0)}</span><span class="ch-who"><b translate="no">${esc(g.opp || "кто угодно по ссылке")}</b><span class="sb">${right}</span></span>`;
   root.innerHTML = `<div class="shop-head"><div><h2>Шахматы ♟</h2><p class="muted">Вызови игрока по юзернейму Telegram. Оба ставят одинаковую сумму — победитель забирает всё, при ничьей ставки возвращаются. Твои фигуры сделаны из материала твоего лучшего зайца.</p></div></div>
     <div class="panel ch-new"><div class="ch-style">${chPieceSVG('K', best)}${chPieceSVG('Q', best)}${chPieceSVG('N', best)}${chPieceSVG('k', best)}<span><b>Твои фигуры: ${esc(chStyleName(best))}</b><span class="sb">Выбей зайца пореже — фигуры станут круче</span></span></div>
       <form id="chForm" class="ch-form" novalidate>
@@ -8065,13 +8077,28 @@ function renderChess(){
         <div class="chips"><button type="button" class="chip" data-chs="0.01">1%</button><button type="button" class="chip" data-chs="0.1">10%</button><button type="button" class="chip" data-chs="0.5">½</button><button type="button" class="chip" data-chs="1">Всё</button></div>
         <p class="err" id="chErr" hidden></p>
         <button class="btn lg" type="submit">Бросить вызов</button>
+        <button class="btn ghost" type="button" id="chLinkBtn">🔗 Вызов по ссылке — для любого друга</button>
       </form></div>
     ${inc.length ? `<div class="sect"><h3>Тебя вызывают</h3><ol class="lb ch-list">${inc.map(g => row(g, `ставка ${esc(g.label || fmtMoney(g.stake))}`) + `<span class="ch-acts"><button class="btn" type="button" data-acc="${g.id}">Принять</button><button class="btn ghost" type="button" data-dec="${g.id}">Нет</button></span></li>`).join('')}</ol></div>` : ''}
     ${act.length ? `<div class="sect"><h3>Партии</h3><ol class="lb ch-list">${act.map(g => row(g, `${g.turn === g.me ? '<b class="gainc">твой ход</b>' : 'ход соперника'} · ставка ${esc(g.label || fmtMoney(g.stake))}`) + `<span class="ch-acts"><button class="btn${g.turn === g.me ? '' : ' ghost'}" type="button" data-open="${g.id}">Открыть</button></span></li>`).join('')}</ol></div>` : ''}
-    ${out.length ? `<div class="sect"><h3>Ждут ответа</h3><ol class="lb ch-list">${out.map(g => row(g, `ставка ${esc(g.label || fmtMoney(g.stake))} · вызов действует 2 дня`) + `<span class="ch-acts"><button class="btn ghost" type="button" data-cancel="${g.id}">Отменить</button></span></li>`).join('')}</ol></div>` : ''}
+    ${out.length ? `<div class="sect"><h3>Ждут ответа</h3><ol class="lb ch-list">${out.map(g => row(g, `${g.open ? 'по ссылке · ' : ''}ставка ${esc(g.label || fmtMoney(g.stake))} · вызов действует 2 дня`) + `<span class="ch-acts">${g.open && g.link ? `<button class="btn" type="button" data-share="${esc(g.link)}">Поделиться</button>` : ''}<button class="btn ghost" type="button" data-cancel="${g.id}">Отменить</button></span></li>`).join('')}</ol></div>` : ''}
     ${fin.length ? `<div class="sect"><h3>Недавние</h3><ol class="lb ch-list">${fin.map(g => { const r = chResultFor(g); return row(g, g.status === 'done' ? `${r === 'win' ? '<b class="gainc">победа</b>' : r === 'draw' ? 'ничья' : 'поражение'}${CH_REASON[g.reason] ? ' · ' + CH_REASON[g.reason] : ''}` : g.status === 'declined' ? 'вызов отклонён' : g.status === 'cancelled' ? 'вызов отменён' : 'вызов истёк') + (g.status === 'done' ? `<span class="ch-acts"><button class="btn ghost" type="button" data-open="${g.id}">Доска</button></span>` : '') + '</li>'; }).join('')}</ol></div>` : ''}
     ${!CH.loaded ? '<p class="muted">Загружаю партии…</p>' : (!CH.games.length ? '<p class="muted">Партий пока нет. Брось вызов другу — ему придёт приглашение в игре и сообщение от бота.</p>' : '')}`;
   const err = m => { const e = $('#chErr', root); e.textContent = m; e.hidden = !m; if (m) Music.sfx('error'); };
+  if (keepU) $('#chUser', root).value = keepU; if (keepS) $('#chStake', root).value = keepS;
+  $$('[data-share]', root).forEach(b => b.onclick = () => chShare(b.dataset.share));
+  $('#chLinkBtn', root).onclick = async () => {
+    err(''); const pa = parseAmount($('#chStake', root).value);
+    if (pa.err || !pa.v.gt(0)) return err('Впиши ставку больше нуля.');
+    const stake = pa.v.toSignificantDigits(30);
+    if (stake.gt(balance())) return err(`Не хватает денег: на балансе ${fmtMoney(balance())}.`);
+    const lb = $('#chLinkBtn', root); lb.disabled = true;
+    const d = await tgPost('/chess/challenge', { open: true, stake: stake.toString(), label: fmtMoney(stake), style: best }).catch(() => null);
+    lb.disabled = false;
+    if (!d || !d.ok) return err(d && d.error === 'too_many' ? 'У тебя уже 5 вызовов без ответа — подожди или отмени какой-нибудь.' : 'Нет связи с сервером. Попробуй ещё раз.');
+    state.balance = balance().minus(stake).toString(); chEsc()[d.game.id] = stake.toString(); save(); renderBalance(true);
+    Music.sfx('power'); d.game.link = d.link; CH.games.unshift(d.game); renderChess(); chShare(d.link);
+  };
   $$('[data-chs]', root).forEach(b => b.onclick = () => { const v = balance().times(+b.dataset.chs); $('#chStake', root).value = inputVal ? inputVal(v) : v.toString(); });
   $('#chForm', root).onsubmit = async e => {
     e.preventDefault(); err('');
@@ -8105,6 +8132,36 @@ function renderChess(){
   $$('[data-dec]', root).forEach(b => b.onclick = async () => { b.disabled = true; await tgPost('/chess/respond', { id: b.dataset.dec, accept: false }).catch(() => null); chList(); });
   $$('[data-cancel]', root).forEach(b => b.onclick = async () => { b.disabled = true; await tgPost('/chess/cancel', { id: b.dataset.cancel }).catch(() => null); await chList(); });
   $$('[data-open]', root).forEach(b => b.onclick = () => chOpenGame(b.dataset.open));
+}
+function chShare(link){
+  if (!link) return;
+  const text = 'Вызываю тебя на шахматы в «Зайцах» ♟ Жми на ссылку и принимай вызов!';
+  try { window.TGW.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text)); }
+  catch(e){ try { navigator.clipboard.writeText(link); toast('Ссылка скопирована', link); } catch(e2){ toast('Ссылка на вызов', link); } }
+}
+// игру открыли по ссылке-вызову: показываем вызов и даём принять
+async function chFromLink(id){
+  const d = await tgPost('/chess/peek', { id }).catch(() => null);
+  if (!d || !d.ok){ toast('Вызов не найден', 'Возможно, ссылка устарела.'); return; }
+  const v = d.info, best = chBest();
+  if (v.mine){ LB.chessOk = true; const cb = $('#tb-chess'); if (cb) cb.hidden = false; showTab('chess'); return; }
+  if (v.status !== 'open'){ toast('♟ Вызов уже недоступен', v.status === 'active' || v.status === 'done' ? 'Его уже кто-то принял.' : 'Его отменили или он истёк.'); return; }
+  if (!v.can){ toast('♟ Шахматы пока закрытые', 'Сыграть можно только с владельцем игры и его друзьями.'); return; }
+  chDefs();
+  openModal({ title: '♟ Вызов на шахматы', body: `<div class="ch-style">${chPieceSVG('K', v.fromStyle)}<i style="font-style:normal;margin:0 6px" class="muted">vs</i>${chPieceSVG('k', best)}</div>
+      <p><b translate="no">${esc(v.from)}</b> вызывает тебя на партию. Ставка: <b>${esc(v.label || fmtMoney(v.stake))}</b> — победитель забирает обе.</p>
+      <p class="muted">Твои фигуры: ${esc(chStyleName(best))}. На балансе: ${fmtMoney(balance())}.</p>`,
+    actions: [{ label: 'Не сейчас' }, { label: 'Принять вызов', primary: true, onClick: () => {
+      const stake = new D(v.stake);
+      if (stake.gt(balance())){ modalError(`Не хватает денег: ставка ${fmtMoney(stake)}, на балансе ${fmtMoney(balance())}.`); return false; }
+      (async () => {
+        const r = await tgPost('/chess/join', { id, style: best }).catch(() => null);
+        if (!r || !r.ok){ toast('Не получилось', r && r.error === 'not_open' ? 'Вызов уже принял кто-то другой.' : 'Нет связи с сервером.'); return; }
+        state.balance = balance().minus(stake).toString(); chEsc()[id] = stake.toString(); save(); renderBalance(true); Music.sfx('power');
+        LB.chessOk = true; const cb = $('#tb-chess'); if (cb) cb.hidden = false;
+        CH.games = [r.game].concat(CH.games.filter(x => x.id !== id)); showTab('chess'); chOpenGame(id);
+      })();
+    } }] });
 }
 function renderChessGame(root){
   const g = CH.game;

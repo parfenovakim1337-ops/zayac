@@ -123,7 +123,7 @@ const chOpp = c => (c === 'w' ? 'b' : 'w');
 // просроченные вызовы и брошенные партии закрываются при первом обращении
 async function chTidy(db, g) {
   const now = Date.now();
-  if (g.status === 'pending' && now - g.created > CH_PENDING_TTL) { g.status = 'expired'; g.updated = now; await db.prepare("UPDATE chess SET status = 'expired', updated = ? WHERE id = ? AND status = 'pending'").bind(now, g.id).run(); }
+  if ((g.status === 'pending' || g.status === 'open') && now - g.created > CH_PENDING_TTL) { const was = g.status; g.status = 'expired'; g.updated = now; await db.prepare("UPDATE chess SET status = 'expired', updated = ? WHERE id = ? AND status = ?").bind(now, g.id, was).run(); }
   if (g.status === 'active' && now - g.updated > CH_IDLE_TTL) {
     const loser = chTurn(g.fen); g.status = 'done'; g.result = loser === 'w' ? '0-1' : '1-0'; g.reason = 'timeout'; g.updated = now;
     await db.prepare("UPDATE chess SET status = 'done', result = ?, reason = 'timeout', updated = ? WHERE id = ? AND status = 'active'").bind(g.result, now, g.id).run();
@@ -132,7 +132,7 @@ async function chTidy(db, g) {
 }
 function chView(g, uid, full) {
   const me = chSideOf(g, uid), op = chOpp(me);
-  const v = { id: g.id, me, opp: op === 'w' ? g.wname : g.bname, myStyle: me === 'w' ? g.wstyle : g.bstyle, oppStyle: op === 'w' ? g.wstyle : g.bstyle,
+  const v = { id: g.id, me, opp: (op === 'w' ? g.wname : g.bname) || '', open: g.status === 'open', myStyle: me === 'w' ? g.wstyle : g.bstyle, oppStyle: op === 'w' ? g.wstyle : g.bstyle,
     mine: g.ch === uid, stake: g.stake, label: g.label, status: g.status, turn: chTurn(g.fen), result: g.result, reason: g.reason, updated: g.updated,
     paid: !!(me === 'w' ? g.wpaid : g.bpaid), n: g.moves ? g.moves.split(' ').length : 0, last: g.moves ? g.moves.split(' ').pop() : '' };
   if (full) { v.fen = g.fen; v.moves = g.moves; }
@@ -149,22 +149,45 @@ async function chessAllowed(db, uid, admin) {
 async function chGet(db, id) { return db.prepare('SELECT * FROM chess WHERE id = ?').bind(String(id || '')).first(); }
 async function chessApi(path, body, env, user, ctx, admin) {
   const db = env.DB, now = Date.now(), uid = user.id, name = cleanName(user.first_name) || 'Игрок';
-  if (!(await chessAllowed(db, uid, admin))) return json({ error: 'closed' }, 403);
   const url = env.GAME_URL || GAME_URL_DEFAULT;
-  const ping = (chat, text) => ctx.waitUntil(tg(env, 'sendMessage', { chat_id: chat, text, reply_markup: { inline_keyboard: [[{ text: '♟ Открыть шахматы', web_app: { url: url + '#chess' } }]] } }).catch(() => {}));
+  const ping = (chat, text) => ctx.waitUntil(tg(env, 'sendMessage', { chat_id: chat, text, reply_markup: { inline_keyboard: [[{ text: '♟ Открыть шахматы', web_app: { url: url + '?open=chess' } }]] } }).catch(() => {}));
+  // вызов по ссылке: посмотреть и принять может любой, если вызов от владельца игры, иначе — только «свои»
+  if (path === '/chess/peek' || path === '/chess/join') {
+    const g = await chGet(db, body.id); if (!g) return json({ error: 'no_game' }, 404);
+    await chTidy(db, g);
+    const aid = +(((await db.prepare("SELECT val FROM kv WHERE key = 'admin_id'").first()) || {}).val || 0);
+    const can = g.status === 'open' && g.ch !== uid && (g.ch === aid || await chessAllowed(db, uid, admin));
+    const side = g.w === g.ch ? 'w' : 'b';
+    const info = { id: g.id, status: g.status, from: side === 'w' ? g.wname : g.bname, fromStyle: side === 'w' ? g.wstyle : g.bstyle, stake: g.stake, label: g.label, mine: g.ch === uid, can };
+    if (path === '/chess/peek') return json({ ok: true, info });
+    if (!can) return json({ error: g.status !== 'open' ? 'not_open' : g.ch === uid ? 'self' : 'closed', info }, 409);
+    const me = side === 'w' ? 'b' : 'w', style = Math.max(0, Math.min(63, body.style | 0));
+    const r = await db.prepare(`UPDATE chess SET ${me} = ?, ${me}name = ?, ${me}style = ?, status = 'active', updated = ? WHERE id = ? AND status = 'open'`).bind(uid, name, style, now, g.id).run();
+    if (!((r.meta ? r.meta.changes : r.changes) > 0)) return json({ error: 'not_open' }, 409);
+    ping(g.ch, `♟ ${name} принял твой вызов по ссылке! ${side === 'w' ? 'Ты играешь белыми — твой ход.' : 'Ты играешь чёрными — ждём ход соперника.'}`);
+    return json({ ok: true, game: chView(await chGet(db, g.id), uid, true) });
+  }
+  if (!(await chessAllowed(db, uid, admin))) return json({ error: 'closed' }, 403);
   if (path === '/chess/challenge') {
-    const un = String(body.username || '').trim().replace(/^@/, '').toLowerCase();
-    if (!/^[a-z0-9_]{4,32}$/.test(un)) return json({ error: 'bad_username' }, 400);
     const stake = String(body.stake || ''), label = cleanName(body.label).slice(0, 24);
     if (stake.length > 40 || !NUM_RE.test(stake) || !(Number(stake) > 0)) return json({ error: 'bad_stake' }, 400);
+    const open = await db.prepare("SELECT COUNT(*) AS n FROM chess WHERE ch = ? AND status IN ('pending','open')").bind(uid).first();
+    if (open && open.n >= 5) return json({ error: 'too_many' }, 429);
+    const style = Math.max(0, Math.min(63, body.style | 0));
+    if (body.open) { // вызов по ссылке: соперник появится, когда кто-то откроет ссылку
+      const id = hex(crypto.getRandomValues(new Uint8Array(6))), meWhite = crypto.getRandomValues(new Uint8Array(1))[0] < 128;
+      await db.prepare('INSERT INTO chess (id, w, b, wname, bname, wstyle, bstyle, ch, stake, label, status, fen, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(id, meWhite ? uid : null, meWhite ? null : uid, meWhite ? name : null, meWhite ? null : name, meWhite ? style : 0, meWhite ? 0 : style, uid, stake, label, 'open', CH_START, now, now).run();
+      const bot = await botUser(env);
+      return json({ ok: true, game: chView(await chGet(db, id), uid), link: bot ? `https://t.me/${bot}?start=chess_${id}` : '' });
+    }
+    const un = String(body.username || '').trim().replace(/^@/, '').toLowerCase();
+    if (!/^[a-z0-9_]{4,32}$/.test(un)) return json({ error: 'bad_username' }, 400);
     const opp = await db.prepare('SELECT id, first FROM names WHERE uname = ?').bind(un).first();
     if (!opp) return json({ error: 'no_player' }, 404);
     if (opp.id === uid) return json({ error: 'self' }, 400);
     if (!admin && !(await chessAllowed(db, opp.id, false))) return json({ error: 'opp_closed' }, 403);
-    const open = await db.prepare("SELECT COUNT(*) AS n FROM chess WHERE ch = ? AND status = 'pending'").bind(uid).first();
-    if (open && open.n >= 5) return json({ error: 'too_many' }, 429);
     const id = hex(crypto.getRandomValues(new Uint8Array(6))), meWhite = crypto.getRandomValues(new Uint8Array(1))[0] < 128;
-    const style = Math.max(0, Math.min(63, body.style | 0));
     const [w, b, wn, bn] = meWhite ? [uid, opp.id, name, opp.first] : [opp.id, uid, opp.first, name];
     await db.prepare('INSERT INTO chess (id, w, b, wname, bname, wstyle, bstyle, ch, stake, label, status, fen, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .bind(id, w, b, wn, bn, meWhite ? style : 0, meWhite ? 0 : style, uid, stake, label, 'pending', CH_START, now, now).run();
@@ -172,8 +195,9 @@ async function chessApi(path, body, env, user, ctx, admin) {
     return json({ ok: true, game: chView(await chGet(db, id), uid) });
   }
   if (path === '/chess/list') {
-    const { results } = await db.prepare("SELECT * FROM chess WHERE (w = ?1 OR b = ?1) AND (status IN ('pending','active') OR updated > ?2 OR (w = ?1 AND wpaid = 0) OR (b = ?1 AND bpaid = 0)) ORDER BY updated DESC LIMIT 40").bind(uid, now - 7 * 86400e3).all();
-    const games = []; for (const g of results) games.push(chView(await chTidy(db, g), uid));
+    const { results } = await db.prepare("SELECT * FROM chess WHERE (w = ?1 OR b = ?1) AND (status IN ('pending','open','active') OR updated > ?2 OR (w = ?1 AND wpaid = 0) OR (b = ?1 AND bpaid = 0)) ORDER BY updated DESC LIMIT 40").bind(uid, now - 7 * 86400e3).all();
+    const games = [], bot = await botUser(env);
+    for (const g of results) { const v = chView(await chTidy(db, g), uid); if (v.open && v.mine && bot) v.link = `https://t.me/${bot}?start=chess_${g.id}`; games.push(v); }
     return json({ ok: true, games });
   }
   const g0 = await chGet(db, body.id); if (!g0) return json({ error: 'no_game' }, 404);
@@ -196,8 +220,8 @@ async function chessApi(path, body, env, user, ctx, admin) {
     return json({ ok: true, game: chView(await chGet(db, g.id), uid, true) });
   }
   if (path === '/chess/cancel') {
-    if (g.status !== 'pending' || g.ch !== uid) return json({ error: 'not_pending' }, 409);
-    await db.prepare("UPDATE chess SET status = 'cancelled', updated = ? WHERE id = ? AND status = 'pending'").bind(now, g.id).run();
+    if ((g.status !== 'pending' && g.status !== 'open') || g.ch !== uid) return json({ error: 'not_pending' }, 409);
+    await db.prepare("UPDATE chess SET status = 'cancelled', updated = ? WHERE id = ? AND status IN ('pending','open')").bind(now, g.id).run();
     return json({ ok: true, game: chView(await chGet(db, g.id), uid) });
   }
   if (path === '/chess/move') {
@@ -265,6 +289,16 @@ async function onUpdate(u, env) {
   if (/^\/start\b/.test(text)) {
     // /start r_<код> — пришёл по ссылке друга: запоминаем, засчитаем, когда он откроет игру
     const code = text.split(/\s+/)[1] || '';
+    // /start chess_<id> — шахматный вызов по ссылке
+    const cm = /^chess_([0-9a-f]{12})$/.exec(code);
+    if (cm) {
+      const g = await db.prepare('SELECT * FROM chess WHERE id = ?').bind(cm[1]).first();
+      const who = g ? (g.ch === g.w ? g.wname : g.bname) : '';
+      const ok = g && g.status === 'open' && g.ch !== m.from.id;
+      await tg(env, 'sendMessage', { chat_id: m.chat.id, text: ok ? `♟ ${who} вызывает тебя на шахматы!${g.label ? ' Ставка: ' + g.label + '.' : ''} Открой игру и прими вызов.` : '♟ Этот вызов уже недоступен — его приняли, отменили или он истёк.',
+        reply_markup: { inline_keyboard: [[{ text: ok ? '♟ Принять вызов' : 'Играть', web_app: { url: (env.GAME_URL || GAME_URL_DEFAULT) + (ok ? '?chess=' + cm[1] : '') } }]] } });
+      return;
+    }
     let invited = false;
     if (code && await isNew(db, m.from.id)) {
       const ref = await inviterOf(db, code, m.from.id);
