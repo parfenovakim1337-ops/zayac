@@ -371,6 +371,12 @@ export default {
     }
 
     if (req.method !== 'POST') return json({ error: 'not_found' }, 404);
+    // ошибки из игры у игроков — в логи Cloudflare (Observability), чтобы видеть, что ломается на чужих телефонах
+    if (url.pathname === '/err') {
+      const t = (await req.text()).slice(0, 2000);
+      console.log('client error', t);
+      return json({ ok: true });
+    }
     let body; try { body = await req.json(); } catch (e) { return json({ error: 'bad_json' }, 400); }
     const user = await checkInit(body.initData, env.BOT_TOKEN);
     if (!user) return json({ error: 'bad_auth' }, 401);

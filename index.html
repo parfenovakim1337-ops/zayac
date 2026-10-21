@@ -15,6 +15,14 @@
 <script>window.Decimal||document.write('<script src="https://unpkg.com/decimal.js@10.4.3/decimal.min.js"><\/script>')</script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
+// ошибки у игроков отправляем на сервер (не больше 3 за запуск), чтобы чинить то, что ломается на чужих телефонах
+(function(){
+  var n = 0, API = 'https://zayac-top.parfenov-akim1337.workers.dev';
+  function rep(msg, src, line, col, stack){ if (n++ >= 3 || location.protocol === 'file:') return;
+    try { fetch(API + '/err', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ msg: String(msg).slice(0, 300), src: String(src || '').slice(-80), line: line, col: col, stack: String(stack || '').slice(0, 600), ua: navigator.userAgent, tg: window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.version, lang: navigator.language }) }); } catch(e){} }
+  window.addEventListener('error', function(e){ rep(e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack); });
+  window.addEventListener('unhandledrejection', function(e){ var r = e.reason || {}; rep('unhandled: ' + (r.message || r), '', 0, 0, r.stack); });
+})();
 (function(){
   var W = window.Telegram && window.Telegram.WebApp, u = W && W.initDataUnsafe && W.initDataUnsafe.user;
   window.TGW = W && W.initData && u && u.id ? W : null;
@@ -9732,7 +9740,7 @@ function i18nStart(){
   const keys = Object.keys(DICT).sort((a, b) => b.length - a.length);
   const L = '[А-Яа-яЁёA-Za-z]', isL = c => /[А-Яа-яЁёA-Za-z]/.test(c);
   // граница слова проверяется только там, где фрагмент начинается/кончается буквой
-  const re = new RegExp(keys.map(k => (isL(k[0]) ? '(?<!' + L + ')' : '') + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + (isL(k[k.length - 1]) ? '(?!' + L + ')' : '')).join('|'), 'gi');
+  const re = new RegExp(keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + (isL(k[k.length - 1]) ? '(?!' + L + ')' : '')).join('|'), 'gi');
   const CYR = /[А-Яа-яЁё]/, cache = new Map(), KEEP = new Set();
   window.i18nKeep = w => { w = String(w || '').trim(); if (w.length >= 2 && /[А-Яа-яЁё]/.test(w) && !KEEP.has(w)){ KEEP.add(w); cache.clear(); } };
   const cap = (m, v) => m[0] !== m[0].toLowerCase() && v ? v[0].toUpperCase() + v.slice(1) : v;
@@ -9743,7 +9751,7 @@ function i18nStart(){
     let src = s; const toks = []; if (KEEP.size) for (const w of KEEP) if (src.includes(w)){ src = src.split(w).join('\u0001' + toks.length + '\u0002'); toks.push(w); }
     const t = src.trim();
     if (DICT[t] !== undefined) r = src.replace(t, () => DICT[t]);
-    else r = src.replace(re, m => { if (DICT[m] !== undefined) return DICT[m]; const v = LOW[m.toLowerCase()]; return v === undefined ? m : cap(m, v); });
+    else r = src.replace(re, (m, off, str) => { if (isL(m[0]) && off > 0 && isL(str[off - 1])) return m; if (DICT[m] !== undefined) return DICT[m]; const v = LOW[m.toLowerCase()]; return v === undefined ? m : cap(m, v); });
     if (toks.length) r = r.replace(/\u0001(\d+)\u0002/g, (_, i) => toks[+i]);
     if (cache.size > 30000) cache.clear();
     cache.set(s, r); return r;
@@ -9771,7 +9779,7 @@ function i18nStart(){
     }
   }).observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:ATTR });
 }
-if (EN) i18nStart();
+if (EN) { try { i18nStart(); } catch(e){ console.error('i18n', e); } }
 async function boot(){
   ensureIdx(); syncTitleBadge();
   // Банк убран: вклад и накопленный доход возвращаются на баланс
