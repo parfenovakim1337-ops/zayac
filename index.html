@@ -8701,7 +8701,7 @@ $('#defCountForm').addEventListener('submit', e => {
   el.count.value = inputCount(state.settings.defCount); updateForm(); renderSettings(); Music.sfx('power');
   toast('Сохранено', `По умолчанию ${fmtCount(state.settings.defCount)} спинов`);
 });
-if (state.settings.defCount >= 1 && state.settings.defCount <= maxSpins()){ el.count.value = inputCount(state.settings.defCount); updateForm(); }
+setTimeout(() => { try { if (state.settings.defCount >= 1 && state.settings.defCount <= maxSpins()){ el.count.value = inputCount(state.settings.defCount); updateForm(); } } catch(e){ console.error('defCount', e); } }, 0);
 // Подарок владельцам легенд после переезда легенд вверх по редкости
 if (state.pets && Array.isArray(state.pets.gift) && state.pets.gift.length){
   const names = state.pets.gift.map(id => (PETS.find(x => x.id === id) || {}).name).filter(Boolean); delete state.pets.gift; save();
