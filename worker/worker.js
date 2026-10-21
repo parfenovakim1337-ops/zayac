@@ -5,6 +5,8 @@
 // Покупки за звёзды: один раз откройте <адрес воркера>/setup — Telegram начнёт присылать сюда оплаты.
 // Личность игрока проверяется по подписи Telegram (initData), подделать чужой аккаунт нельзя.
 
+import { CH_START, chParse, chPlay } from './chess.js';
+
 const LIMIT = 100;
 const MAX_AGE = 7 * 24 * 3600;       // initData старше недели не принимаем
 const MIN_GAP = 5000;                 // одна запись от игрока не чаще раза в 5 секунд
@@ -94,6 +96,9 @@ const REF_CAP = 20; // больше 20 друзей бонус не растёт
 // вызывается при каждом заходе игрока в игру
 async function touchPlayer(env, user, k) {
   const db = env.DB, now = Date.now();
+  // юзернейм нужен, чтобы игрока можно было вызвать на шахматы по @нику
+  await db.prepare('INSERT INTO names (id, uname, first, ts) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(id) DO UPDATE SET uname = ?2, first = ?3, ts = ?4 WHERE names.uname IS NOT ?2 OR names.first IS NOT ?3')
+    .bind(user.id, String(user.username || '').toLowerCase() || null, cleanName(user.first_name) || 'Игрок', now).run();
   const p = await db.prepare('SELECT ref_by, ok, k FROM players WHERE id = ?').bind(user.id).first();
   if (!p) {
     const ref = (await isNew(db, user.id)) ? await inviterOf(db, user._start, user.id) : null;
@@ -109,6 +114,111 @@ async function refInfo(env, user, k) {
   const fl = await env.DB.prepare('SELECT rainbow FROM flags WHERE id = ?').bind(user.id).first();
   return { refs: n, refLink: bot ? `https://t.me/${bot}?start=r_${k}` : '', rainbow: n >= REF_RAINBOW || !!(fl && fl.rainbow) };
 }
+// ---- Шахматы 1 на 1: вызов по юзернейму, ставка игровыми деньгами, ходы проверяет сервер ----
+const CH_PENDING_TTL = 48 * 3600e3, CH_IDLE_TTL = 72 * 3600e3;
+const chSideOf = (g, uid) => g.w === uid ? 'w' : g.b === uid ? 'b' : '';
+const chTurn = fen => (String(fen).split(' ')[1] === 'b' ? 'b' : 'w');
+const chOpp = c => (c === 'w' ? 'b' : 'w');
+// просроченные вызовы и брошенные партии закрываются при первом обращении
+async function chTidy(db, g) {
+  const now = Date.now();
+  if (g.status === 'pending' && now - g.created > CH_PENDING_TTL) { g.status = 'expired'; g.updated = now; await db.prepare("UPDATE chess SET status = 'expired', updated = ? WHERE id = ? AND status = 'pending'").bind(now, g.id).run(); }
+  if (g.status === 'active' && now - g.updated > CH_IDLE_TTL) {
+    const loser = chTurn(g.fen); g.status = 'done'; g.result = loser === 'w' ? '0-1' : '1-0'; g.reason = 'timeout'; g.updated = now;
+    await db.prepare("UPDATE chess SET status = 'done', result = ?, reason = 'timeout', updated = ? WHERE id = ? AND status = 'active'").bind(g.result, now, g.id).run();
+  }
+  return g;
+}
+function chView(g, uid, full) {
+  const me = chSideOf(g, uid), op = chOpp(me);
+  const v = { id: g.id, me, opp: op === 'w' ? g.wname : g.bname, myStyle: me === 'w' ? g.wstyle : g.bstyle, oppStyle: op === 'w' ? g.wstyle : g.bstyle,
+    mine: g.ch === uid, stake: g.stake, label: g.label, status: g.status, turn: chTurn(g.fen), result: g.result, reason: g.reason, updated: g.updated,
+    paid: !!(me === 'w' ? g.wpaid : g.bpaid), n: g.moves ? g.moves.split(' ').length : 0, last: g.moves ? g.moves.split(' ').pop() : '' };
+  if (full) { v.fen = g.fen; v.moves = g.moves; }
+  return v;
+}
+async function chGet(db, id) { return db.prepare('SELECT * FROM chess WHERE id = ?').bind(String(id || '')).first(); }
+async function chessApi(path, body, env, user, ctx) {
+  const db = env.DB, now = Date.now(), uid = user.id, name = cleanName(user.first_name) || 'Игрок';
+  const url = env.GAME_URL || GAME_URL_DEFAULT;
+  const ping = (chat, text) => ctx.waitUntil(tg(env, 'sendMessage', { chat_id: chat, text, reply_markup: { inline_keyboard: [[{ text: '♟ Открыть шахматы', web_app: { url: url + '#chess' } }]] } }).catch(() => {}));
+  if (path === '/chess/challenge') {
+    const un = String(body.username || '').trim().replace(/^@/, '').toLowerCase();
+    if (!/^[a-z0-9_]{4,32}$/.test(un)) return json({ error: 'bad_username' }, 400);
+    const stake = String(body.stake || ''), label = cleanName(body.label).slice(0, 24);
+    if (stake.length > 40 || !NUM_RE.test(stake) || !(Number(stake) > 0)) return json({ error: 'bad_stake' }, 400);
+    const opp = await db.prepare('SELECT id, first FROM names WHERE uname = ?').bind(un).first();
+    if (!opp) return json({ error: 'no_player' }, 404);
+    if (opp.id === uid) return json({ error: 'self' }, 400);
+    const open = await db.prepare("SELECT COUNT(*) AS n FROM chess WHERE ch = ? AND status = 'pending'").bind(uid).first();
+    if (open && open.n >= 5) return json({ error: 'too_many' }, 429);
+    const id = hex(crypto.getRandomValues(new Uint8Array(6))), meWhite = crypto.getRandomValues(new Uint8Array(1))[0] < 128;
+    const style = Math.max(0, Math.min(63, body.style | 0));
+    const [w, b, wn, bn] = meWhite ? [uid, opp.id, name, opp.first] : [opp.id, uid, opp.first, name];
+    await db.prepare('INSERT INTO chess (id, w, b, wname, bname, wstyle, bstyle, ch, stake, label, status, fen, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, w, b, wn, bn, meWhite ? style : 0, meWhite ? 0 : style, uid, stake, label, 'pending', CH_START, now, now).run();
+    ping(opp.id, `♟ ${name} вызывает тебя на шахматы!${label ? ' Ставка: ' + label + '.' : ''} Открой игру, чтобы принять вызов.`);
+    return json({ ok: true, game: chView(await chGet(db, id), uid) });
+  }
+  if (path === '/chess/list') {
+    const { results } = await db.prepare("SELECT * FROM chess WHERE (w = ?1 OR b = ?1) AND (status IN ('pending','active') OR updated > ?2 OR (w = ?1 AND wpaid = 0) OR (b = ?1 AND bpaid = 0)) ORDER BY updated DESC LIMIT 40").bind(uid, now - 7 * 86400e3).all();
+    const games = []; for (const g of results) games.push(chView(await chTidy(db, g), uid));
+    return json({ ok: true, games });
+  }
+  const g0 = await chGet(db, body.id); if (!g0) return json({ error: 'no_game' }, 404);
+  const g = await chTidy(db, g0), me = chSideOf(g, uid); if (!me) return json({ error: 'forbidden' }, 403);
+  if (path === '/chess/state') {
+    ctx.waitUntil(db.prepare(`UPDATE chess SET ${me}seen = ? WHERE id = ?`).bind(now, g.id).run());
+    return json({ ok: true, game: chView(g, uid, true) });
+  }
+  if (path === '/chess/respond') {
+    if (g.status !== 'pending' || g.ch === uid) return json({ error: 'not_pending' }, 409);
+    if (body.accept) {
+      const style = Math.max(0, Math.min(63, body.style | 0));
+      const r = await db.prepare(`UPDATE chess SET status = 'active', ${me}style = ?, updated = ? WHERE id = ? AND status = 'pending'`).bind(style, now, g.id).run();
+      if (!((r.meta ? r.meta.changes : r.changes) > 0)) return json({ error: 'not_pending' }, 409);
+      ping(g.ch, `♟ ${name} принял вызов! ${chTurn(g.fen) === chSideOf(g, g.ch) ? 'Ты играешь белыми — твой ход.' : 'Ты играешь чёрными — ждём ход соперника.'}`);
+    } else {
+      await db.prepare("UPDATE chess SET status = 'declined', updated = ? WHERE id = ? AND status = 'pending'").bind(now, g.id).run();
+      ping(g.ch, `♟ ${name} отклонил вызов. Ставка вернётся, когда откроешь игру.`);
+    }
+    return json({ ok: true, game: chView(await chGet(db, g.id), uid, true) });
+  }
+  if (path === '/chess/cancel') {
+    if (g.status !== 'pending' || g.ch !== uid) return json({ error: 'not_pending' }, 409);
+    await db.prepare("UPDATE chess SET status = 'cancelled', updated = ? WHERE id = ? AND status = 'pending'").bind(now, g.id).run();
+    return json({ ok: true, game: chView(await chGet(db, g.id), uid) });
+  }
+  if (path === '/chess/move') {
+    if (g.status !== 'active') return json({ error: 'not_active' }, 409);
+    if (chTurn(g.fen) !== me) return json({ error: 'not_your_turn' }, 409);
+    const n = g.moves ? g.moves.split(' ').length : 0;
+    if ((body.n | 0) !== n) return json({ error: 'stale', game: chView(g, uid, true) }, 409);
+    const r = chPlay(g.fen, body.uci); if (!r) return json({ error: 'illegal', game: chView(g, uid, true) }, 400);
+    const moves = (g.moves ? g.moves + ' ' : '') + body.uci, st = r.status;
+    const u = await db.prepare(`UPDATE chess SET fen = ?, moves = ?, updated = ?, status = ?, result = ?, reason = ? WHERE id = ? AND moves = ? AND status = 'active'`)
+      .bind(r.fen, moves, now, st.over ? 'done' : 'active', st.result, st.reason, g.id, g.moves || '').run();
+    if (!((u.meta ? u.meta.changes : u.changes) > 0)) return json({ error: 'stale' }, 409);
+    const ng = await chGet(db, g.id), opp = me === 'w' ? g.b : g.w, oppSeen = me === 'w' ? g.bseen : g.wseen;
+    if (st.over) ping(opp, st.reason === 'mate' ? `♟ Мат! ${name} выиграл партию.` : `♟ Партия с ${name} закончилась вничью.`);
+    else if (now - (oppSeen || 0) > 90e3) ping(opp, `♟ ${name} сделал ход — теперь твоя очередь.`);
+    return json({ ok: true, game: chView(ng, uid, true) });
+  }
+  if (path === '/chess/resign') {
+    if (g.status !== 'active') return json({ error: 'not_active' }, 409);
+    await db.prepare("UPDATE chess SET status = 'done', result = ?, reason = 'resign', updated = ? WHERE id = ? AND status = 'active'").bind(me === 'w' ? '0-1' : '1-0', now, g.id).run();
+    ping(me === 'w' ? g.b : g.w, `♟ ${name} сдался — победа твоя!`);
+    return json({ ok: true, game: chView(await chGet(db, g.id), uid, true) });
+  }
+  // расчёт ставки: каждая сторона забирает свой итог ровно один раз (даже с двух устройств)
+  if (path === '/chess/settle') {
+    if (!['done', 'declined', 'cancelled', 'expired'].includes(g.status)) return json({ error: 'not_over' }, 409);
+    const r = await db.prepare(`UPDATE chess SET ${me}paid = 1 WHERE id = ? AND ${me}paid = 0`).bind(g.id).run();
+    return json({ ok: true, first: ((r.meta ? r.meta.changes : r.changes) || 0) > 0, game: chView(await chGet(db, g.id), uid) });
+  }
+  return json({ error: 'not_found' }, 404);
+}
+
 const owned = async (db, uid) => (await db.prepare('SELECT item FROM purchases WHERE user_id = ? AND refunded = 0').bind(uid).all()).results.map(r => r.item);
 
 async function onUpdate(u, env) {
@@ -169,6 +279,13 @@ async function ensure(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS players_ref ON players (ref_by, ok)'),
     db.prepare('CREATE TABLE IF NOT EXISTS flags (id INTEGER PRIMARY KEY, rainbow INTEGER DEFAULT 0)'),
     db.prepare('CREATE TABLE IF NOT EXISTS ref_bonus (id INTEGER PRIMARY KEY, n INTEGER DEFAULT 0)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS names (id INTEGER PRIMARY KEY, uname TEXT, first TEXT, ts INTEGER)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS names_u ON names (uname)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS chess (id TEXT PRIMARY KEY, w INTEGER, b INTEGER, wname TEXT, bname TEXT, wstyle INTEGER, bstyle INTEGER, ch INTEGER,
+      stake TEXT, label TEXT, status TEXT, fen TEXT, moves TEXT DEFAULT '', result TEXT DEFAULT '', reason TEXT DEFAULT '', created INTEGER, updated INTEGER,
+      wpaid INTEGER DEFAULT 0, bpaid INTEGER DEFAULT 0, wseen INTEGER DEFAULT 0, bseen INTEGER DEFAULT 0)`),
+    db.prepare('CREATE INDEX IF NOT EXISTS chess_w ON chess (w, updated)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS chess_b ON chess (b, updated)'),
   ]);
   ready = true;
 }
@@ -252,6 +369,8 @@ export default {
       if (!r.ok) return json({ error: 'tg', detail: r.description }, 502);
       return json({ ok: true, link: r.result });
     }
+
+    if (url.pathname.startsWith('/chess/')) return chessApi(url.pathname, body, env, user, ctx);
 
     if (url.pathname === '/admin') {
       if (!admin) return json({ error: 'forbidden' }, 403);

@@ -1572,6 +1572,29 @@ html.tg .tg-shop{ display:grid; gap:10px; margin-top:6px; }
 html.tg .tg-item{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--line); border-radius:12px; }
 html.tg .tg-item > div{ display:grid; gap:2px; } html.tg .tg-item .muted{ font-size:12px; }
 html.tg .tg-item .btn{ white-space:nowrap; flex:none; } html.tg .tg-own{ white-space:nowrap; color:var(--gain); font-weight:700; }
+html.tg .ch-new{ display:grid; gap:12px; margin-bottom:14px; }
+html.tg .ch-style{ display:flex; align-items:center; gap:4px; } html.tg .ch-style .chp{ width:40px; height:40px; } html.tg .ch-style > span{ display:grid; margin-left:8px; }
+html.tg .ch-form{ display:grid; gap:10px; }
+html.tg .ch-list{ display:grid; gap:8px; padding:0; list-style:none; }
+html.tg .ch-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); flex-wrap:wrap; }
+html.tg .ch-mini{ display:flex; align-items:center; gap:2px; } html.tg .ch-mini .chp{ width:30px; height:30px; } html.tg .ch-mini i{ font-style:normal; font-size:10px; color:var(--mute); }
+html.tg .ch-who{ display:grid; flex:1 1 120px; min-width:0; } html.tg .ch-acts{ display:flex; gap:6px; margin-left:auto; }
+html.tg .ch-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+html.tg .ch-pl{ display:flex; align-items:center; gap:8px; margin:6px auto; width:min(100%,440px); } html.tg .ch-pl .chp{ width:34px; height:34px; } html.tg .ch-pl .sb{ margin-left:auto; }
+html.tg .ch-board{ display:grid; grid-template-columns:repeat(8,1fr); width:min(100%,440px); margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 0 0 4px #5b3b22,0 12px 32px rgba(0,0,0,.45); touch-action:manipulation; }
+html.tg .ch-board .ch-sq{ border-radius:0 !important; min-width:0; min-height:0; height:auto; line-height:0; box-shadow:none; outline:none; font:inherit; color:inherit; transform:none; }
+html.tg .ch-sq{ position:relative; border:0; padding:0; margin:0; aspect-ratio:1; display:grid; place-items:center; cursor:pointer; background:#ecd9b8; -webkit-tap-highlight-color:transparent; }
+html.tg .ch-sq.d{ background:#a97c53; }
+html.tg .ch-sq.last{ background-image:linear-gradient(rgba(255,214,90,.42),rgba(255,214,90,.42)); }
+html.tg .ch-board .ch-sq.sel{ box-shadow:inset 0 0 0 4px rgba(255,200,40,.95); }
+html.tg .ch-sq.chk{ background-image:radial-gradient(circle,rgba(255,40,40,.9),rgba(255,40,40,0) 72%); }
+html.tg .ch-sq.tgt::after{ content:''; position:absolute; width:30%; height:30%; border-radius:50%; background:rgba(25,20,10,.38); pointer-events:none; }
+html.tg .ch-sq.tgt.cap::after{ width:86%; height:86%; background:none; border:4px solid rgba(25,20,10,.38); }
+html.tg .ch-sq .chp{ width:90%; height:90%; filter:drop-shadow(0 2px 2px rgba(0,0,0,.4)); pointer-events:none; }
+html.tg .ch-sq i{ position:absolute; font-style:normal; font-size:9px; font-weight:700; opacity:.65; pointer-events:none; color:#3b2412; }
+html.tg .ch-sq.d i{ color:#f6e7cc; } html.tg .ch-sq i.rk{ left:2px; top:1px; } html.tg .ch-sq i.fl{ right:3px; bottom:0; }
+html.tg .ch-status{ text-align:center; margin:10px 0 6px; } html.tg .ch-warn{ color:#ef4444; }
+html.tg .ch-promo{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; } html.tg .ch-pbtn{ border:1px solid var(--line); border-radius:12px; background:#ecd9b8; padding:6px; cursor:pointer; } html.tg .ch-pbtn .chp{ width:100%; height:auto; aspect-ratio:1; }
 html.tg .lb-ban{ margin-left:6px; border:0; background:none; font-size:16px; cursor:pointer; opacity:.6; padding:4px; } html.tg .lb-ban:hover{ opacity:1; }
 </style>
 
@@ -1605,7 +1628,7 @@ html.tg .lb-ban{ margin-left:6px; border:0; background:none; font-size:16px; cur
   <!-- подменю раздела: прежние вкладки, сгруппированные по смыслу -->
   <nav class="subtabs" id="sub-shop" role="tablist" aria-label="Маркет" hidden><button class="tab" role="tab" data-tab="shop" aria-selected="false" id="tb-shop">Магазин</button><button class="tab" role="tab" data-tab="inv" aria-selected="false" id="tb-inv">Инвентарь</button></nav>
   <nav class="subtabs" id="sub-luck" role="tablist" aria-label="Удача" hidden><button class="tab" role="tab" data-tab="case" aria-selected="false" id="tb-case">Кейсы</button><button class="tab" role="tab" data-tab="summon" aria-selected="false" id="tb-summon">Призывы</button></nav>
-  <nav class="subtabs" id="sub-prog" role="tablist" aria-label="Прогресс" hidden><button class="tab" role="tab" data-tab="idx" aria-selected="false" id="tb-idx">Индекс</button><button class="tab" role="tab" data-tab="ach" aria-selected="false" id="tb-ach">Достижения<span class="tdot" id="achDot" hidden></span></button><button class="tab" role="tab" data-tab="top" aria-selected="false" id="tb-top">Топ</button></nav>
+  <nav class="subtabs" id="sub-prog" role="tablist" aria-label="Прогресс" hidden><button class="tab" role="tab" data-tab="idx" aria-selected="false" id="tb-idx">Индекс</button><button class="tab" role="tab" data-tab="ach" aria-selected="false" id="tb-ach">Достижения<span class="tdot" id="achDot" hidden></span></button><button class="tab" role="tab" data-tab="top" aria-selected="false" id="tb-top">Топ</button><button class="tab" role="tab" data-tab="chess" aria-selected="false" id="tb-chess" hidden>Шахматы<span class="tdot" id="chDot" hidden></span></button></nav>
 
   <!-- ИГРА -->
   <section id="tab-game">
@@ -1710,6 +1733,7 @@ html.tg .lb-ban{ margin-left:6px; border:0; background:none; font-size:16px; cur
 
   <!-- ЛИДЕРБОРД -->
   <section id="tab-top" hidden></section>
+  <section id="tab-chess" hidden></section>
   <section id="tab-ach" hidden></section>
 
   <!-- НАСТРОЙКИ -->
@@ -7582,7 +7606,7 @@ async function tgInit(){
   try { W.onEvent('deactivated', () => { save(); cloudPush(false); }); } catch(e){}
   if (!(TGCS() && W.isVersionAtLeast('6.9'))){ CL.ro = true; return; }
   await cloudInit();
-  if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000); }
+  if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000); const cb = $('#tb-chess'); if (cb) cb.hidden = false; chList(); if (location.hash === '#chess' || (window.TGW.initDataUnsafe && window.TGW.initDataUnsafe.start_param === 'chess')) showTab('chess'); }
 }
 /* ---- общий топ через свой сервер (Cloudflare Worker) ---- */
 const TOP_API = 'https://zayac-top.parfenov-akim1337.workers.dev';
@@ -7728,13 +7752,371 @@ window.TG_EN = { 'В топе как': 'In the top as', 'Вы скрыты из 
   'Авто олл-ин навсегда': 'Auto all-in forever', 'Золотой ник в топе': 'Golden name in the top', 'Игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп».': 'The game bets your whole balance series after series until you press “Stop”.',
   'Ваше имя в общем топе горит золотом.': 'Your name shines gold in the top.', 'Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки': 'The first 10 buyers get a crown by their name, the very first one also gets sparkles', 'Осталось корон:': 'Crowns left:', 'из 10': 'of 10', 'Все 10 корон уже разобраны': 'All 10 crowns are taken', 'Друзья': 'Friends', 'друзей': 'friends', 'к выплатам': 'to payouts', 'до радужного ника': 'to a rainbow name', 'радужный ник': 'rainbow name',
   'Каждый друг, впервые открывший игру по твоей ссылке, добавляет': 'Every friend who opens the game for the first time via your link adds', 'к множителю выплат: 1 друг — ×1.1, 5 друзей — ×1.5, максимум': 'to your payout multiplier: 1 friend — ×1.1, 5 friends — ×1.5, up to', 'Ещё': 'More', '— и твой ник в топе станет радужным': '— and your name in the top turns rainbow', 'Твой ник в топе — радужный': 'Your name in the top is rainbow',
-  'Позвать друзей': 'Invite friends', 'Скопировать ссылку': 'Copy link', 'Ссылка скопирована': 'Link copied', 'Ваша ссылка': 'Your link', 'Отправьте её друзьям.': 'Send it to your friends.', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
+  'Позвать друзей': 'Invite friends', 'Шахматы': 'Chess', 'Вызови игрока по юзернейму Telegram. Оба ставят одинаковую сумму — победитель забирает всё, при ничьей ставки возвращаются. Твои фигуры сделаны из материала твоего лучшего зайца.': 'Challenge a player by their Telegram username. Both put up the same stake — the winner takes it all, a draw returns the stakes. Your pieces are made of your best rabbit’s material.',
+  'Твои фигуры:': 'Your pieces:', 'Выбей зайца пореже — фигуры станут круче': 'Get a rarer rabbit — your pieces get cooler', 'Юзернейм соперника': 'Opponent’s username', 'Ставка, $': 'Stake, $', 'Всё': 'All', 'Бросить вызов': 'Challenge',
+  'Тебя вызывают': 'Challenges for you', 'Принять': 'Accept', 'Нет': 'No', 'Партии': 'Games', 'твой ход': 'your move', 'ход соперника': 'opponent’s move', 'ставка': 'stake', 'Открыть': 'Open', 'Ждут ответа': 'Waiting for reply', 'вызов действует 2 дня': 'challenge lasts 2 days', 'Отменить': 'Cancel',
+  'Недавние': 'Recent', 'победа': 'win', 'ничья': 'draw', 'поражение': 'loss', 'вызов отклонён': 'challenge declined', 'вызов отменён': 'challenge cancelled', 'вызов истёк': 'challenge expired', 'Доска': 'Board', 'Загружаю партии…': 'Loading games…',
+  'Партий пока нет. Брось вызов другу — ему придёт приглашение в игре и сообщение от бота.': 'No games yet. Challenge a friend — they’ll get an invite in the game and a message from the bot.',
+  '← Все партии': '← All games', 'банк': 'pot', 'Ты': 'You', 'белые': 'white', 'чёрные': 'black', 'Сдаться': 'Resign', 'Точно сдаться?': 'Really resign?', 'ходов:': 'moves:', 'Твой ход': 'Your move', 'Шах! Твой ход': 'Check! Your move', 'Ход соперника…': 'Opponent’s move…',
+  'Шах сопернику · ждём его ход': 'Check to the opponent · waiting', 'Ждём, пока соперник примет вызов': 'Waiting for the opponent to accept', 'Победа! 🏆': 'Victory! 🏆', 'Ничья': 'Draw', 'Поражение': 'Defeat', 'Партия не состоялась': 'Game didn’t happen',
+  'мат': 'checkmate', 'пат': 'stalemate', 'правило 50 ходов': '50-move rule', 'мало фигур для мата': 'insufficient material', 'соперник сдался': 'resignation', 'время на ход вышло': 'move time ran out', 'Превращение пешки': 'Pawn promotion', 'Загружаю партию…': 'Loading game…',
+  'Вызов на шахматы': 'Chess challenge', 'вызывает тебя': 'challenges you', 'Ставка:': 'Stake:', 'Вызов отправлен': 'Challenge sent', 'получит приглашение': 'will get an invite', 'отложена до конца партии': 'is held until the game ends', 'Ход не прошёл': 'Move failed',
+  'Победа!': 'Victory!', 'Партия с': 'Game with', 'Выигрыш:': 'Winnings:', 'Ставка вернулась': 'Stake returned', 'ушла сопернику': 'went to the opponent', 'Не хватает денег': 'Not enough money', 'Не получилось': 'Didn’t work',
+  'Впиши юзернейм соперника из Telegram, например @durov.': 'Enter your opponent’s Telegram username, e.g. @durov.', 'Впиши ставку больше нуля.': 'Enter a stake above zero.', 'Себя вызвать нельзя 🙂': 'You can’t challenge yourself 🙂',
+  'Нет связи с сервером. Попробуй ещё раз.': 'No connection to the server. Try again.', 'Скопировать ссылку': 'Copy link', 'Ссылка скопирована': 'Link copied', 'Ваша ссылка': 'Your link', 'Отправьте её друзьям.': 'Send it to your friends.', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
   'Покупка навсегда и на всех устройствах с вашим Telegram. Оплата звёздами Telegram.': 'Yours forever, on every device with your Telegram. Paid with Telegram Stars.',
   'Уже куплено': 'Already purchased', 'Оплата сейчас недоступна': 'Payment is unavailable right now', 'Попробуйте чуть позже.': 'Please try a bit later.', 'Оплачено': 'Paid', 'Спасибо! Включаю покупку…': 'Thanks! Activating your purchase…',
   'Готово!': 'Done!', 'уже в игре.': 'is now in the game.', 'Покупка обрабатывается': 'Purchase is processing', 'Перезапустите игру через минуту. Если не появится — команда /paysupport в боте.': 'Restart the game in a minute. If it doesn’t appear, use /paysupport in the bot.',
   'Оплата не прошла': 'Payment failed', 'Звёзды не списаны.': 'No Stars were charged.', 'Нет связи с сервером': 'No connection to the server', 'Попробуйте ещё раз.': 'Please try again.',
   'Покупки игроков': 'Player purchases', 'Покупки игроков · админ': 'Player purchases · admin', 'Покупок пока нет.': 'No purchases yet.', 'возвращено': 'refunded', 'Вернуть': 'Refund', 'Точно вернуть?': 'Really refund?', 'Возвращено': 'Refunded', 'Ошибка': 'Error',
   'Покупки за звёзды Telegram. Всё — удобство и украшения, на выигрыш не влияет.': 'Purchases with Telegram Stars. Convenience and cosmetics only — they don’t affect winnings.' };
+
+/* ================= ШАХМАТЫ 1 НА 1 (Telegram) ================= */
+// Вызов по @юзернейму, ставка игровыми деньгами (победитель забирает обе), ходы проверяет сервер.
+// Фигуры каждого игрока — из «материала» его лучшего зайца; король — сам заяц в короне.
+// Шахматные правила для игры «Зайцы»: один и тот же код проверяет ходы на сервере и подсвечивает их в игре.
+// Доска — массив из 64 клеток: индекс = ряд*8 + вертикаль, ряд 0 — первая горизонталь (белые внизу).
+// Фигуры: P N B R Q K — белые, p n b r q k — чёрные, '' — пусто.
+const CH_START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const chFile = s => s & 7, chRank = s => s >> 3;
+const chSq = n => (n.charCodeAt(0) - 97) + (n.charCodeAt(1) - 49) * 8;
+const chName = s => String.fromCharCode(97 + chFile(s)) + (chRank(s) + 1);
+const chWhite = p => p !== '' && p === p.toUpperCase();
+const chSide = p => p === '' ? '' : chWhite(p) ? 'w' : 'b';
+
+function chParse(fen) {
+  const [pos, turn, castle, ep, half, full] = String(fen || CH_START).split(' ');
+  const b = new Array(64).fill('');
+  pos.split('/').forEach((row, i) => { let f = 0; for (const c of row) { if (/\d/.test(c)) f += +c; else { b[(7 - i) * 8 + f] = c; f++; } } });
+  return { b, turn: turn === 'b' ? 'b' : 'w', castle: castle && castle !== '-' ? castle : '', ep: ep && ep !== '-' ? chSq(ep) : -1, half: +half || 0, full: +full || 1 };
+}
+function chFen(s) {
+  const rows = [];
+  for (let r = 7; r >= 0; r--) { let row = '', e = 0; for (let f = 0; f < 8; f++) { const p = s.b[r * 8 + f]; if (!p) e++; else { if (e) { row += e; e = 0; } row += p; } } if (e) row += e; rows.push(row); }
+  return `${rows.join('/')} ${s.turn} ${s.castle || '-'} ${s.ep >= 0 ? chName(s.ep) : '-'} ${s.half} ${s.full}`;
+}
+const CH_N = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
+const CH_K = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+const CH_D = [[1, 1], [1, -1], [-1, 1], [-1, -1]], CH_O = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const chAt = (f, r) => f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1;
+
+// бьёт ли сторона by клетку sq
+function chAttacked(s, sq, by) {
+  const f = chFile(sq), r = chRank(sq), up = by === 'w' ? -1 : 1, P = by === 'w' ? 'P' : 'p';
+  for (const df of [-1, 1]) { const t = chAt(f + df, r + up); if (t >= 0 && s.b[t] === P) return true; }
+  const own = p => p !== '' && chSide(p) === by;
+  for (const [df, dr] of CH_N) { const t = chAt(f + df, r + dr); if (t >= 0 && own(s.b[t]) && s.b[t].toUpperCase() === 'N') return true; }
+  for (const [df, dr] of CH_K) { const t = chAt(f + df, r + dr); if (t >= 0 && own(s.b[t]) && s.b[t].toUpperCase() === 'K') return true; }
+  for (const [dirs, kinds] of [[CH_D, 'BQ'], [CH_O, 'RQ']]) for (const [df, dr] of dirs) {
+    let ff = f + df, rr = r + dr;
+    while (ff >= 0 && ff < 8 && rr >= 0 && rr < 8) { const p = s.b[rr * 8 + ff]; if (p) { if (own(p) && kinds.includes(p.toUpperCase())) return true; break; } ff += df; rr += dr; }
+  }
+  return false;
+}
+const chKing = (s, side) => s.b.indexOf(side === 'w' ? 'K' : 'k');
+const chInCheck = (s, side) => { const k = chKing(s, side); return k >= 0 && chAttacked(s, k, side === 'w' ? 'b' : 'w'); };
+
+function chPseudo(s) {
+  const out = [], me = s.turn, them = me === 'w' ? 'b' : 'w';
+  const add = (from, to, promo) => out.push({ from, to, promo: promo || '' });
+  for (let sq = 0; sq < 64; sq++) {
+    const p = s.b[sq]; if (!p || chSide(p) !== me) continue;
+    const f = chFile(sq), r = chRank(sq), k = p.toUpperCase();
+    if (k === 'P') {
+      const dir = me === 'w' ? 1 : -1, last = me === 'w' ? 7 : 0, start = me === 'w' ? 1 : 6;
+      const push = (to) => { if (chRank(to) === last) 'QRBN'.split('').forEach(q => add(sq, to, q)); else add(sq, to); };
+      const one = chAt(f, r + dir);
+      if (one >= 0 && !s.b[one]) { push(one); const two = chAt(f, r + 2 * dir); if (r === start && !s.b[two]) add(sq, two); }
+      for (const df of [-1, 1]) { const t = chAt(f + df, r + dir); if (t < 0) continue; if ((s.b[t] && chSide(s.b[t]) === them) || t === s.ep) push(t); }
+    } else if (k === 'N' || k === 'K') {
+      for (const [df, dr] of (k === 'N' ? CH_N : CH_K)) { const t = chAt(f + df, r + dr); if (t >= 0 && chSide(s.b[t]) !== me) add(sq, t); }
+      if (k === 'K') {
+        const rank = me === 'w' ? 0 : 7, base = rank * 8;
+        if (sq === base + 4 && !chAttacked(s, sq, them)) {
+          const K = me === 'w' ? 'K' : 'k', Q = me === 'w' ? 'Q' : 'q', R = me === 'w' ? 'R' : 'r';
+          if (s.castle.includes(K) && s.b[base + 7] === R && !s.b[base + 5] && !s.b[base + 6] && !chAttacked(s, base + 5, them) && !chAttacked(s, base + 6, them)) add(sq, base + 6);
+          if (s.castle.includes(Q) && s.b[base] === R && !s.b[base + 1] && !s.b[base + 2] && !s.b[base + 3] && !chAttacked(s, base + 3, them) && !chAttacked(s, base + 2, them)) add(sq, base + 2);
+        }
+      }
+    } else {
+      const dirs = k === 'B' ? CH_D : k === 'R' ? CH_O : CH_D.concat(CH_O);
+      for (const [df, dr] of dirs) { let ff = f + df, rr = r + dr; while (ff >= 0 && ff < 8 && rr >= 0 && rr < 8) { const t = rr * 8 + ff; if (s.b[t]) { if (chSide(s.b[t]) === them) add(sq, t); break; } add(sq, t); ff += df; rr += dr; } }
+    }
+  }
+  return out;
+}
+function chApply(s, m) {
+  const b = s.b.slice(), p = b[m.from], me = s.turn, k = p.toUpperCase();
+  let castle = s.castle, ep = -1, half = s.half + 1;
+  const cap = b[m.to] || (k === 'P' && m.to === s.ep ? (me === 'w' ? 'p' : 'P') : '');
+  if (k === 'P' || cap) half = 0;
+  b[m.to] = m.promo ? (me === 'w' ? m.promo.toUpperCase() : m.promo.toLowerCase()) : p; b[m.from] = '';
+  if (k === 'P' && m.to === s.ep) b[m.to + (me === 'w' ? -8 : 8)] = '';
+  if (k === 'P' && Math.abs(m.to - m.from) === 16) ep = (m.to + m.from) / 2;
+  if (k === 'K' && Math.abs(m.to - m.from) === 2) { // рокировка: ладья перепрыгивает
+    if (m.to > m.from) { b[m.from + 1] = b[m.from + 3]; b[m.from + 3] = ''; } else { b[m.from - 1] = b[m.from - 4]; b[m.from - 4] = ''; }
+  }
+  const strip = (cs) => { for (const c of cs) castle = castle.replace(c, ''); };
+  if (k === 'K') strip(me === 'w' ? 'KQ' : 'kq');
+  [[0, 'Q'], [7, 'K'], [56, 'q'], [63, 'k']].forEach(([sq, c]) => { if (m.from === sq || m.to === sq) strip(c); });
+  return { b, turn: me === 'w' ? 'b' : 'w', castle, ep, half, full: s.full + (me === 'b' ? 1 : 0), cap };
+}
+function chMoves(s) { return chPseudo(s).filter(m => !chInCheck(chApply(s, m), s.turn)); }
+function chInsufficient(s) {
+  const left = s.b.filter(p => p && p.toUpperCase() !== 'K').map(p => p.toUpperCase());
+  return left.length === 0 || (left.length === 1 && 'BN'.includes(left[0]));
+}
+// итог позиции: '' — игра идёт; иначе причина конца
+function chStatus(s) {
+  const moves = chMoves(s), check = chInCheck(s, s.turn);
+  if (!moves.length) return { over: true, check, result: check ? (s.turn === 'w' ? '0-1' : '1-0') : '1/2', reason: check ? 'mate' : 'stalemate' };
+  if (s.half >= 100) return { over: true, check, result: '1/2', reason: 'fifty' };
+  if (chInsufficient(s)) return { over: true, check, result: '1/2', reason: 'material' };
+  return { over: false, check, result: '', reason: '' };
+}
+// ход в виде 'e2e4' или 'e7e8q' → новая позиция или null, если ход невозможен
+function chPlay(fen, uci) {
+  const s = chParse(fen), u = String(uci || '');
+  if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(u)) return null;
+  const from = chSq(u.slice(0, 2)), to = chSq(u.slice(2, 4)), promo = (u[4] || '').toUpperCase();
+  const m = chMoves(s).find(x => x.from === from && x.to === to && (x.promo || '') === promo);
+  if (!m) return null;
+  const n = chApply(s, m);
+  return { fen: chFen(n), cap: n.cap, status: chStatus(n) };
+}
+
+const CH_MAT = [ // [свет, тёмная сторона, обводка]
+  [['#f4f4f1', '#cfcfca', '#9a9a94'], ['#85857f', '#55554f', '#2b2b29'], '#3a3a36'],
+  [['#f6e2c8', '#cf9f70', '#8a5a33'], ['#a06e45', '#64401f', '#33200f'], '#3b2412'],
+  [['#ffffff', '#eef0f5', '#c7cad3'], ['#a7abb8', '#6d7180', '#3c3f4a'], '#2c2f38'],
+  [['#ffffff', '#dbe1e9', '#97a1ae'], ['#a3adba', '#647080', '#2f3640'], '#262c34'],
+  [['#fff3c4', '#ffd04d', '#c48a00'], ['#d39a12', '#8a5a00', '#4a2f00'], '#5a3a00'],
+  [['#dbeafe', '#60a5fa', '#1d4ed8'], ['#3366d6', '#1e3a8a', '#0b1a4a'], '#0b1a4a'],
+  [['#f3e8ff', '#c084fc', '#7e22ce'], ['#8a46cc', '#581c87', '#2e0a4a'], '#2e0a4a'],
+  [['#ffe4e6', '#fb7185', '#be123c'], ['#cc2b44', '#881337', '#4a0a1c'], '#4a0a1c'],
+  [['#d1fae5', '#34d399', '#047857'], ['#13a072', '#065f46', '#022c22'], '#022c22'],
+  [['#ffb3b3', '#ffe28a', '#a8ffbf', '#8ad8ff', '#dcb0ff'], ['#c2410c', '#a16207', '#15803d', '#1d4ed8', '#7e22ce'], '#2a1b3d'],
+  [['#fff3c4', '#ffd04d', '#ffa3d9', '#a3dcff', '#ffd04d'], ['#b07a0c', '#b45309', '#9d174d', '#1e40af', '#a16207'], '#4a2f00'],
+  [['#eafff1', '#7dffb2', '#10b981'], ['#0f3d2e', '#062a20', '#000000'], '#34d399'],
+  [['#ffffff', '#e5e5e5', '#a3a3a3'], ['#3f3f46', '#18181b', '#000000'], '#71717a'],
+  [['#ffe4e6', '#ef4444', '#7f1d1d'], ['#5a0d0d', '#260707', '#000000'], '#ef4444'],
+  [['#ecfccb', '#a3e635', '#4d7c0f'], ['#5a8a14', '#365314', '#1a2e05'], '#1a2e05'],
+  [['#ede9fe', '#a78bfa', '#5b21b6'], ['#3b0764', '#1e0533', '#0a0014'], '#a78bfa'],
+  [['#fffbea', '#ffe8a3', '#f5c542'], ['#e0b04a', '#8a6a1f', '#3d2e0a'], '#6b5214'],
+  [['#e0f2fe', '#a5b4fc', '#7c3aed', '#0ea5e9'], ['#312e81', '#1e1b4b', '#4c1d95', '#0c4a6e'], '#60a5fa'],
+  [['#fde68a', '#d4a24c', '#8a5a2b'], ['#6b4520', '#3b2510', '#1f1308'], '#fbbf24'],
+  [['#ffffff', '#f1ede4', '#cfc6b4'], ['#6a5240', '#3b2a1f', '#1f150e'], '#2a1d14'],
+  [['#ffffff', '#fff7d6', '#ffd76a'], ['#3b2f7a', '#1e1b4b', '#0b0a24'], '#ffd76a'],
+];
+const chMat = t => CH_MAT[Math.max(0, Math.min(CH_MAT.length - 1, t | 0))];
+const chBest = () => { const r = state.idx && state.idx.rabbits; if (!r) return 0; for (let i = r.length - 1; i >= 0; i--) if (r[i] > 0) return Math.min(i, CH_MAT.length - 1); return 0; };
+const chStyleName = t => RABBITS[Math.max(0, Math.min(RABBITS.length - 1, t | 0))].name;
+// градиенты фигур — один раз на документ
+function chDefs(){
+  if ($('#chDefs')) return;
+  const stops = cs => cs.map((c, i) => `<stop offset="${(i / (cs.length - 1)).toFixed(2)}" stop-color="${c}"/>`).join('');
+  const g = CH_MAT.map((m, t) => `<linearGradient id="chg${t}w" x1="0" y1="0" x2=".6" y2="1">${stops(m[0])}</linearGradient><linearGradient id="chg${t}b" x1="0" y1="0" x2=".6" y2="1">${stops(m[1])}</linearGradient>`).join('');
+  document.body.insertAdjacentHTML('beforeend', `<svg id="chDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${g}<radialGradient id="chShine" cx=".3" cy=".25" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs></svg>`);
+}
+const CH_SHAPE = {
+  P: '<circle cx="50" cy="35" r="12.5"/><path d="M37 80 Q38 56 50 49 Q62 56 63 80 Z"/><ellipse cx="50" cy="50" rx="14" ry="4.5"/>',
+  R: '<path d="M33 80 L35 40 L65 40 L67 80 Z"/><path d="M29 41 L29 22 L37 22 L37 29 L45 29 L45 22 L55 22 L55 29 L63 29 L63 22 L71 22 L71 41 Z"/>',
+  N: '<path d="M34 81 L35 66 Q28 55 34 44 Q40 30 53 24 L55 15 L61 23 Q75 29 74 46 L74 52 L65 49 Q59 55 64 62 Q69 71 66 81 Z"/><circle cx="60" cy="33" r="2.4" fill="#000" fill-opacity=".55" stroke="none"/>',
+  B: '<circle cx="50" cy="14" r="4.5"/><path d="M50 18 Q67 33 61 51 Q50 57 39 51 Q33 33 50 18 Z"/><path d="M39 80 Q41 59 50 56 Q59 59 61 80 Z"/><path d="M53 29 L46 41" stroke-width="3" fill="none"/>',
+  Q: '<path d="M29 43 L34 22 L42 37 L50 15 L58 37 L66 22 L71 43 Q60 49 50 49 Q40 49 29 43 Z"/><circle cx="34" cy="21" r="3.6"/><circle cx="50" cy="14" r="3.6"/><circle cx="66" cy="21" r="3.6"/><path d="M38 80 Q40 56 50 50 Q60 56 62 80 Z"/>',
+  // король — заяц в короне
+  K: '<ellipse cx="42" cy="24" rx="5.5" ry="15" transform="rotate(-12 42 24)"/><ellipse cx="58" cy="24" rx="5.5" ry="15" transform="rotate(12 58 24)"/><circle cx="50" cy="44" r="13.5"/><path d="M37 81 Q38 60 50 56 Q62 60 63 81 Z"/><path d="M41 33 L43 25 L47 30 L50 23 L53 30 L57 25 L59 33 Z" fill="#ffd34d" stroke="#8a5a00" stroke-width="1.6"/><circle cx="45.5" cy="43" r="1.9" fill="#000" fill-opacity=".7" stroke="none"/><circle cx="54.5" cy="43" r="1.9" fill="#000" fill-opacity=".7" stroke="none"/>',
+};
+function chPieceSVG(p, style){
+  const side = chWhite(p) ? 'w' : 'b', k = p.toUpperCase(), m = chMat(style), t = Math.max(0, Math.min(CH_MAT.length - 1, style | 0));
+  const stroke = side === 'w' ? m[2] : (t >= 11 ? m[2] : '#000');
+  return `<svg viewBox="0 0 100 100" class="chp"><g fill="url(#chg${t}${side})" stroke="${stroke}" stroke-width="2.6" stroke-linejoin="round">${CH_SHAPE[k]}<path d="M27 93 L73 93 L69 81 L31 81 Z"/></g><ellipse cx="42" cy="58" rx="7" ry="14" fill="url(#chShine)" opacity="${side === 'w' ? .7 : .35}"/></svg>`;
+}
+const CH = { games: [], view: null, game: null, sel: -1, tick: 0, seen: new Set(), loaded: false, sending: false };
+const chEsc = () => { if (!state.chess || typeof state.chess !== 'object') state.chess = { esc: {} }; if (!state.chess.esc) state.chess.esc = {}; return state.chess.esc; };
+const chOpen = () => { const t = $('#tab-chess'); return !!(t && !t.hidden); };
+const CH_REASON = { mate: 'мат', stalemate: 'пат', fifty: 'правило 50 ходов', material: 'мало фигур для мата', resign: 'соперник сдался', timeout: 'время на ход вышло' };
+function chResultFor(g){ // 'win' | 'loss' | 'draw' | ''
+  if (g.status !== 'done') return '';
+  if (g.result === '1/2') return 'draw';
+  return (g.result === '1-0') === (g.me === 'w') ? 'win' : 'loss';
+}
+// ---- деньги: ставка списывается сразу, итог зачисляется один раз ----
+async function chSettleAll(){
+  const esc = chEsc();
+  for (const g of CH.games){
+    if (g.paid || !['done', 'declined', 'cancelled', 'expired'].includes(g.status)) continue;
+    let d; try { d = await tgPost('/chess/settle', { id: g.id }); } catch(e){ continue; }
+    if (!d || !d.ok) continue;
+    g.paid = true;
+    const st = esc[g.id]; delete esc[g.id];
+    if (!d.first || !st) { save(); continue; }
+    const stake = new D(st), r = chResultFor(g);
+    const back = g.status !== 'done' ? stake : r === 'win' ? stake.times(2) : r === 'draw' ? stake : new D(0);
+    if (back.gt(0)){ state.balance = balance().plus(back).toString(); renderBalance(true); }
+    save();
+    if (g.status === 'done') toast(r === 'win' ? '♟ Победа!' : r === 'draw' ? '♟ Ничья' : '♟ Поражение', `Партия с ${g.opp}` + (CH_REASON[g.reason] ? ` · ${CH_REASON[g.reason]}` : ''), r === 'win' ? `Выигрыш: +${fmtMoney(back)}` : r === 'draw' ? `Ставка вернулась: ${fmtMoney(back)}` : `Ставка ${fmtMoney(stake)} ушла сопернику`);
+    else toast('♟ Ставка вернулась', `Вызов ${g.opp} ${g.status === 'declined' ? 'отклонён' : g.status === 'cancelled' ? 'отменён' : 'истёк'}`, fmtMoney(back));
+    Music.sfx(r === 'loss' ? 'error' : 'claim');
+  }
+}
+async function chList(){
+  if (!TOP_API) return;
+  let d; try { d = await tgPost('/chess/list', {}); } catch(e){ return; }
+  if (!d || !d.ok) return;
+  CH.games = d.games || []; CH.loaded = true;
+  // новые вызовы — уведомление
+  CH.games.filter(g => g.status === 'pending' && !g.mine).forEach(g => { if (!CH.seen.has(g.id)){ CH.seen.add(g.id); if (CH.loaded) { toast('♟ Вызов на шахматы', `${g.opp} вызывает тебя`, `Ставка: ${g.label || fmtMoney(g.stake)}`); Music.sfx('pop'); } } });
+  await chSettleAll(); chBadge();
+  if (chOpen() && !CH.view) renderChess();
+}
+function chBadge(){
+  const n = CH.games.filter(g => (g.status === 'pending' && !g.mine) || (g.status === 'active' && g.turn === g.me)).length;
+  const dot = $('#chDot'); if (dot){ dot.hidden = !n; dot.textContent = n > 1 ? n : ''; }
+}
+async function chOpenGame(id){
+  CH.view = id; CH.sel = -1; CH.game = CH.games.find(g => g.id === id) || null;
+  renderChess(); await chPoll(true);
+}
+async function chPoll(force){
+  if (!CH.view || CH.sending) return;
+  let d; try { d = await tgPost('/chess/state', { id: CH.view }); } catch(e){ return; }
+  if (!d || !d.ok || CH.sending) return;
+  const old = CH.game, g = d.game;
+  const changed = !old || old.n !== g.n || old.status !== g.status || !old.fen;
+  CH.game = g; const i = CH.games.findIndex(x => x.id === g.id); if (i >= 0) CH.games[i] = Object.assign(CH.games[i], g);
+  if (changed){
+    if (old && old.fen && g.n > old.n){ const st = chStatus(chParse(g.fen)); Music.sfx(st.check ? 'power' : 'click'); }
+    if (g.status !== 'active' && g.status !== 'pending') await chSettleAll();
+    if (chOpen()) renderChess();
+  }
+  chBadge();
+}
+// фоновый опрос: открытая партия — часто, иначе — редко
+setInterval(() => {
+  if (!window.TGW || !TOP_API) return;
+  CH.tick++;
+  if (chOpen() && CH.view){ const g = CH.game; const myTurn = g && g.status === 'active' && g.turn === g.me; if (!myTurn || CH.tick % 4 === 0) chPoll(); }
+  else if (chOpen() ? CH.tick % 3 === 0 : CH.tick % 12 === 0) chList();
+}, 2500);
+
+function renderChess(){
+  const root = $('#tab-chess'); if (!root) return;
+  chDefs();
+  if (CH.view) return renderChessGame(root);
+  const best = chBest(), bal = balance();
+  const pend = CH.games.filter(g => g.status === 'pending'), inc = pend.filter(g => !g.mine), out = pend.filter(g => g.mine);
+  const act = CH.games.filter(g => g.status === 'active'), fin = CH.games.filter(g => !['pending', 'active'].includes(g.status)).slice(0, 8);
+  const row = (g, right) => `<li class="ch-row"><span class="ch-mini">${chPieceSVG(g.me === 'w' ? 'K' : 'k', g.myStyle != null ? g.myStyle : best)}<i>vs</i>${chPieceSVG(g.me === 'w' ? 'k' : 'K', g.oppStyle || 0)}</span><span class="ch-who"><b translate="no">${esc(g.opp)}</b><span class="sb">${right}</span></span>`;
+  root.innerHTML = `<div class="shop-head"><div><h2>Шахматы ♟</h2><p class="muted">Вызови игрока по юзернейму Telegram. Оба ставят одинаковую сумму — победитель забирает всё, при ничьей ставки возвращаются. Твои фигуры сделаны из материала твоего лучшего зайца.</p></div></div>
+    <div class="panel ch-new"><div class="ch-style">${chPieceSVG('K', best)}${chPieceSVG('Q', best)}${chPieceSVG('N', best)}${chPieceSVG('k', best)}<span><b>Твои фигуры: ${esc(chStyleName(best))}</b><span class="sb">Выбей зайца пореже — фигуры станут круче</span></span></div>
+      <form id="chForm" class="ch-form" novalidate>
+        <label class="field"><span class="lbl">Юзернейм соперника</span><input class="input" id="chUser" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@username"></label>
+        <label class="field"><span class="lbl">Ставка, $</span><input class="input" id="chStake" inputmode="decimal" autocomplete="off" placeholder="например 1млрд"></label>
+        <div class="chips"><button type="button" class="chip" data-chs="0.01">1%</button><button type="button" class="chip" data-chs="0.1">10%</button><button type="button" class="chip" data-chs="0.5">½</button><button type="button" class="chip" data-chs="1">Всё</button></div>
+        <p class="err" id="chErr" hidden></p>
+        <button class="btn lg" type="submit">Бросить вызов</button>
+      </form></div>
+    ${inc.length ? `<div class="sect"><h3>Тебя вызывают</h3><ol class="lb ch-list">${inc.map(g => row(g, `ставка ${esc(g.label || fmtMoney(g.stake))}`) + `<span class="ch-acts"><button class="btn" type="button" data-acc="${g.id}">Принять</button><button class="btn ghost" type="button" data-dec="${g.id}">Нет</button></span></li>`).join('')}</ol></div>` : ''}
+    ${act.length ? `<div class="sect"><h3>Партии</h3><ol class="lb ch-list">${act.map(g => row(g, `${g.turn === g.me ? '<b class="gainc">твой ход</b>' : 'ход соперника'} · ставка ${esc(g.label || fmtMoney(g.stake))}`) + `<span class="ch-acts"><button class="btn${g.turn === g.me ? '' : ' ghost'}" type="button" data-open="${g.id}">Открыть</button></span></li>`).join('')}</ol></div>` : ''}
+    ${out.length ? `<div class="sect"><h3>Ждут ответа</h3><ol class="lb ch-list">${out.map(g => row(g, `ставка ${esc(g.label || fmtMoney(g.stake))} · вызов действует 2 дня`) + `<span class="ch-acts"><button class="btn ghost" type="button" data-cancel="${g.id}">Отменить</button></span></li>`).join('')}</ol></div>` : ''}
+    ${fin.length ? `<div class="sect"><h3>Недавние</h3><ol class="lb ch-list">${fin.map(g => { const r = chResultFor(g); return row(g, g.status === 'done' ? `${r === 'win' ? '<b class="gainc">победа</b>' : r === 'draw' ? 'ничья' : 'поражение'}${CH_REASON[g.reason] ? ' · ' + CH_REASON[g.reason] : ''}` : g.status === 'declined' ? 'вызов отклонён' : g.status === 'cancelled' ? 'вызов отменён' : 'вызов истёк') + (g.status === 'done' ? `<span class="ch-acts"><button class="btn ghost" type="button" data-open="${g.id}">Доска</button></span>` : '') + '</li>'; }).join('')}</ol></div>` : ''}
+    ${!CH.loaded ? '<p class="muted">Загружаю партии…</p>' : (!CH.games.length ? '<p class="muted">Партий пока нет. Брось вызов другу — ему придёт приглашение в игре и сообщение от бота.</p>' : '')}`;
+  const err = m => { const e = $('#chErr', root); e.textContent = m; e.hidden = !m; if (m) Music.sfx('error'); };
+  $$('[data-chs]', root).forEach(b => b.onclick = () => { const v = balance().times(+b.dataset.chs); $('#chStake', root).value = inputVal ? inputVal(v) : v.toString(); });
+  $('#chForm', root).onsubmit = async e => {
+    e.preventDefault(); err('');
+    const un = $('#chUser', root).value.trim().replace(/^@/, ''), pa = parseAmount($('#chStake', root).value);
+    if (!/^[A-Za-z0-9_]{4,32}$/.test(un)) return err('Впиши юзернейм соперника из Telegram, например @durov.');
+    if (pa.err || !pa.v.gt(0)) return err('Впиши ставку больше нуля.');
+    const stake = pa.v.toSignificantDigits(30);
+    if (stake.gt(balance())) return err(`Не хватает денег: на балансе ${fmtMoney(balance())}.`);
+    const btn = e.submitter || $('#chForm button[type=submit]', root); btn.disabled = true;
+    let d; try { d = await tgPost('/chess/challenge', { username: un, stake: stake.toString(), label: fmtMoney(stake), style: best }); } catch(x){ d = null; }
+    btn.disabled = false;
+    if (!d || !d.ok){
+      const m = { no_player: `Игрок @${un} ещё не открывал «Зайцев». Позови его по своей ссылке из карточки «Друзья».`, self: 'Себя вызвать нельзя 🙂', too_many: 'У тебя уже 5 вызовов без ответа — подожди или отмени какой-нибудь.', bad_username: 'Такого юзернейма не бывает.', bad_stake: 'Странная ставка — попробуй другое число.' };
+      return err(m[d && d.error] || 'Нет связи с сервером. Попробуй ещё раз.');
+    }
+    if (stake.gt(balance())){ await tgPost('/chess/cancel', { id: d.game.id }).catch(() => {}); return err('Баланс изменился — ставки уже не хватает.'); }
+    state.balance = balance().minus(stake).toString(); chEsc()[d.game.id] = stake.toString(); save(); renderBalance(true);
+    toast('♟ Вызов отправлен', `@${un} получит приглашение`, `Ставка ${fmtMoney(stake)} отложена до конца партии`); Music.sfx('power');
+    CH.games.unshift(d.game); renderChess();
+  };
+  $$('[data-acc]', root).forEach(b => b.onclick = async () => {
+    const g = CH.games.find(x => x.id === b.dataset.acc); if (!g) return;
+    const stake = new D(g.stake);
+    if (stake.gt(balance())) { toast('Не хватает денег', `Ставка ${fmtMoney(stake)}, на балансе ${fmtMoney(balance())}.`); Music.sfx('error'); return; }
+    b.disabled = true;
+    const d = await tgPost('/chess/respond', { id: g.id, accept: true, style: chBest() }).catch(() => null);
+    if (!d || !d.ok){ b.disabled = false; toast('Не получилось', d && d.error === 'not_pending' ? 'Вызов уже отменён или истёк.' : 'Нет связи с сервером.'); chList(); return; }
+    state.balance = balance().minus(stake).toString(); chEsc()[g.id] = stake.toString(); save(); renderBalance(true);
+    Music.sfx('power'); CH.games = CH.games.map(x => x.id === g.id ? d.game : x); chOpenGame(g.id);
+  });
+  $$('[data-dec]', root).forEach(b => b.onclick = async () => { b.disabled = true; await tgPost('/chess/respond', { id: b.dataset.dec, accept: false }).catch(() => null); chList(); });
+  $$('[data-cancel]', root).forEach(b => b.onclick = async () => { b.disabled = true; await tgPost('/chess/cancel', { id: b.dataset.cancel }).catch(() => null); await chList(); });
+  $$('[data-open]', root).forEach(b => b.onclick = () => chOpenGame(b.dataset.open));
+}
+function renderChessGame(root){
+  const g = CH.game;
+  if (!g || !g.fen){ root.innerHTML = '<p class="muted">Загружаю партию…</p>'; return; }
+  const s = chParse(g.fen), st = chStatus(s), me = g.me, flip = me === 'b', myTurn = g.status === 'active' && s.turn === me;
+  const legal = myTurn ? chMoves(s) : [], targets = CH.sel >= 0 ? legal.filter(m => m.from === CH.sel).map(m => m.to) : [];
+  const last = g.last ? [chSq(g.last.slice(0, 2)), chSq(g.last.slice(2, 4))] : [], kingSq = st.check ? s.b.indexOf(s.turn === 'w' ? 'K' : 'k') : -1;
+  const style = sq => chWhite(s.b[sq]) === (me === 'w') ? g.myStyle : g.oppStyle;
+  let cells = '';
+  for (let vr = 0; vr < 8; vr++) for (let vf = 0; vf < 8; vf++){
+    const r = flip ? vr : 7 - vr, f = flip ? 7 - vf : vf, sq = r * 8 + f, p = s.b[sq];
+    const cls = ['ch-sq', (r + f) % 2 ? 'l' : 'd', sq === CH.sel ? 'sel' : '', last.includes(sq) ? 'last' : '', sq === kingSq ? 'chk' : '', targets.includes(sq) ? (p ? 'tgt cap' : 'tgt') : ''].filter(Boolean).join(' ');
+    cells += `<button type="button" class="${cls}" data-sq="${sq}" aria-label="${chName(sq)}">${p ? chPieceSVG(p, style(sq)) : ''}${vf === 0 ? `<i class="rk">${r + 1}</i>` : ''}${vr === 7 ? `<i class="fl">${'abcdefgh'[f]}</i>` : ''}</button>`;
+  }
+  const r = chResultFor(g);
+  const status = g.status === 'pending' ? 'Ждём, пока соперник примет вызов' : g.status === 'active' ? (myTurn ? (st.check ? '<b class="ch-warn">Шах! Твой ход</b>' : '<b>Твой ход</b>') : (st.check ? 'Шах сопернику · ждём его ход' : 'Ход соперника…'))
+    : g.status === 'done' ? `<b>${r === 'win' ? 'Победа! 🏆' : r === 'draw' ? 'Ничья' : 'Поражение'}</b>${CH_REASON[g.reason] ? ' · ' + CH_REASON[g.reason] : ''}` : 'Партия не состоялась';
+  root.innerHTML = `<div class="ch-top"><button class="btn ghost" type="button" id="chBack">← Все партии</button><span class="muted">ставка ${esc(g.label || fmtMoney(g.stake))} · банк ${fmtMoney(new D(g.stake).times(2))}</span></div>
+    <div class="ch-pl">${chPieceSVG(me === 'w' ? 'k' : 'K', g.oppStyle)}<b translate="no">${esc(g.opp)}</b><span class="sb">${esc(chStyleName(g.oppStyle))}</span></div>
+    <div class="ch-board${flip ? ' flip' : ''}">${cells}</div>
+    <div class="ch-pl">${chPieceSVG(me === 'w' ? 'K' : 'k', g.myStyle)}<b>Ты</b><span class="sb">${esc(chStyleName(g.myStyle))} · ${me === 'w' ? 'белые' : 'чёрные'}</span></div>
+    <p class="ch-status">${status}</p>
+    <div class="row">${g.status === 'active' ? '<button class="btn ghost" type="button" id="chResign">Сдаться</button>' : ''}<span class="muted" style="margin-left:auto">ходов: ${Math.ceil(g.n / 2)}</span></div>`;
+  $('#chBack', root).onclick = () => { CH.view = null; CH.game = null; CH.sel = -1; renderChess(); chList(); };
+  const rs = $('#chResign', root); if (rs) rs.onclick = async () => {
+    if (rs.dataset.sure !== '1'){ rs.dataset.sure = '1'; rs.textContent = 'Точно сдаться?'; return; }
+    rs.disabled = true; const d = await tgPost('/chess/resign', { id: g.id }).catch(() => null);
+    if (d && d.ok){ CH.game = d.game; await chList(); renderChess(); }
+  };
+  $$('.ch-sq', root).forEach(b => b.onclick = () => {
+    if (!myTurn || CH.sending) return;
+    const sq = +b.dataset.sq, p = s.b[sq];
+    if (CH.sel >= 0 && targets.includes(sq)){
+      const from = CH.sel, mv = legal.filter(m => m.from === from && m.to === sq);
+      if (mv.length > 1) return chPromo(from, sq);
+      return chSend(chName(from) + chName(sq));
+    }
+    CH.sel = p && chSide(p) === me && sq !== CH.sel ? sq : -1; if (CH.sel >= 0) Music.sfx('pop'); renderChessGame(root);
+  });
+}
+function chPromo(from, to){
+  const g = CH.game, side = g.me;
+  openModal({ title: 'Превращение пешки', body: `<div class="ch-promo">${'QRBN'.split('').map(k => `<button type="button" class="ch-pbtn" data-pr="${k.toLowerCase()}">${chPieceSVG(side === 'w' ? k : k.toLowerCase(), g.myStyle)}</button>`).join('')}</div>`,
+    actions: [{ label: 'Отмена' }], onOpen: m => $$('[data-pr]', m).forEach(b => b.onclick = () => { closeModal(); chSend(chName(from) + chName(to) + b.dataset.pr); }) });
+}
+async function chSend(uci){
+  const g = CH.game; if (!g) return;
+  const r = chPlay(g.fen, uci); if (!r) return;
+  // сразу показываем ход, сервер подтверждает
+  const prev = Object.assign({}, g);
+  CH.sending = true; CH.sel = -1;
+  CH.game = Object.assign({}, g, { fen: r.fen, n: g.n + 1, last: uci, turn: g.turn === 'w' ? 'b' : 'w', status: r.status.over ? 'done' : 'active', result: r.status.result, reason: r.status.reason });
+  Music.sfx(r.status.check ? 'power' : r.cap ? 'thunk' : 'click');
+  renderChess();
+  const d = await tgPost('/chess/move', { id: g.id, uci, n: g.n }).catch(() => null);
+  CH.sending = false;
+  if (d && d.ok) CH.game = d.game;
+  else { CH.game = (d && d.game) || prev; toast('Ход не прошёл', d && d.error === 'stale' ? 'Позиция обновилась — посмотри доску.' : 'Нет связи с сервером, попробуй ещё раз.'); }
+  if (CH.game.status === 'done'){ await chList(); }
+  renderChess();
+}
 
 /* ================= ЛИДЕРБОРД: общий топ игроков по деньгам ================= */
 // Каждый игрок пишет только свою строку leaders/<id>; читают все. Хранится только ник, сумма и рекорды — без имён профиля.
@@ -9194,10 +9576,10 @@ function renderLearn(){
 
 /* ================= НАВИГАЦИЯ И СТАРТ ================= */
 // Разделы верхнего меню и вкладки внутри них
-const TAB_GRP = { game: 'game', shop: 'shop', inv: 'shop', case: 'luck', summon: 'luck', idx: 'prog', ach: 'prog', top: 'prog', learn: 'learn', set: 'set', admin: 'admin', journal: 'game', bank: 'game' };
+const TAB_GRP = { game: 'game', shop: 'shop', inv: 'shop', case: 'luck', summon: 'luck', idx: 'prog', ach: 'prog', top: 'prog', chess: 'prog', learn: 'learn', set: 'set', admin: 'admin', journal: 'game', bank: 'game' };
 function showTab(name){
-  if (!['game', 'idx', 'ach', 'shop', 'inv', 'case', 'summon', 'top', 'set', 'learn'].includes(name) && !(name === 'admin' && OWNER)) name = 'game';
-  ['game', 'journal', 'idx', 'ach', 'bank', 'shop', 'inv', 'case', 'summon', 'top', 'set', 'learn', 'admin'].forEach(t => {
+  if (!['game', 'idx', 'ach', 'shop', 'inv', 'case', 'summon', 'top', 'chess', 'set', 'learn'].includes(name) && !(name === 'admin' && OWNER)) name = 'game';
+  ['game', 'journal', 'idx', 'ach', 'bank', 'shop', 'inv', 'case', 'summon', 'top', 'chess', 'set', 'learn', 'admin'].forEach(t => { if (!$('#tab-' + t)) return;
     $('#tab-' + t).hidden = t !== name;
     $('#tb-' + t).setAttribute('aria-selected', t === name ? 'true' : 'false');
   });
@@ -9216,6 +9598,7 @@ function showTab(name){
   if (name === 'summon') renderSummon(); else clearTimeout(smTm); // автопризыв продолжается в фоне
   if (name === 'top') { renderTop(); lbPush(false); }
   if (name === 'admin') renderAdmin();
+  if (name === 'chess'){ renderChess(); chList(); }
 }
 $$('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
