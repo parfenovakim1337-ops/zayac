@@ -112,7 +112,8 @@ async function touchPlayer(env, user, k) {
 async function refInfo(env, user, k) {
   const n = await refCount(env.DB, user.id), bot = await botUser(env);
   const fl = await env.DB.prepare('SELECT rainbow FROM flags WHERE id = ?').bind(user.id).first();
-  return { refs: n, refLink: bot ? `https://t.me/${bot}?start=r_${k}` : '', rainbow: n >= REF_RAINBOW || !!(fl && fl.rainbow) };
+  const admin = String(user.username || '').toLowerCase() === String(env.ADMIN_USERNAME || 'zenix228').toLowerCase();
+  return { refs: n, refLink: bot ? `https://t.me/${bot}?start=r_${k}` : '', rainbow: n >= REF_RAINBOW || !!(fl && fl.rainbow), chess: await chessAllowed(env.DB, user.id, admin) };
 }
 // ---- Шахматы 1 на 1: вызов по юзернейму, ставка игровыми деньгами, ходы проверяет сервер ----
 const CH_PENDING_TTL = 48 * 3600e3, CH_IDLE_TTL = 72 * 3600e3;
@@ -137,9 +138,18 @@ function chView(g, uid, full) {
   if (full) { v.fen = g.fen; v.moves = g.moves; }
   return v;
 }
+// Шахматы пока закрытые: владелец игры, приглашённые им друзья (по реф-ссылке) и те, кого он сам вызвал
+async function chessAllowed(db, uid, admin) {
+  if (admin) return true;
+  const a = await db.prepare("SELECT val FROM kv WHERE key = 'admin_id'").first(); if (!a) return false;
+  const aid = +a.val;
+  if (await db.prepare('SELECT 1 FROM players WHERE id = ? AND ref_by = ?').bind(uid, aid).first()) return true;
+  return !!(await db.prepare('SELECT 1 FROM chess WHERE (w = ?1 AND b = ?2) OR (w = ?2 AND b = ?1) LIMIT 1').bind(uid, aid).first());
+}
 async function chGet(db, id) { return db.prepare('SELECT * FROM chess WHERE id = ?').bind(String(id || '')).first(); }
-async function chessApi(path, body, env, user, ctx) {
+async function chessApi(path, body, env, user, ctx, admin) {
   const db = env.DB, now = Date.now(), uid = user.id, name = cleanName(user.first_name) || 'Игрок';
+  if (!(await chessAllowed(db, uid, admin))) return json({ error: 'closed' }, 403);
   const url = env.GAME_URL || GAME_URL_DEFAULT;
   const ping = (chat, text) => ctx.waitUntil(tg(env, 'sendMessage', { chat_id: chat, text, reply_markup: { inline_keyboard: [[{ text: '♟ Открыть шахматы', web_app: { url: url + '#chess' } }]] } }).catch(() => {}));
   if (path === '/chess/challenge') {
@@ -150,6 +160,7 @@ async function chessApi(path, body, env, user, ctx) {
     const opp = await db.prepare('SELECT id, first FROM names WHERE uname = ?').bind(un).first();
     if (!opp) return json({ error: 'no_player' }, 404);
     if (opp.id === uid) return json({ error: 'self' }, 400);
+    if (!admin && !(await chessAllowed(db, opp.id, false))) return json({ error: 'opp_closed' }, 403);
     const open = await db.prepare("SELECT COUNT(*) AS n FROM chess WHERE ch = ? AND status = 'pending'").bind(uid).first();
     if (open && open.n >= 5) return json({ error: 'too_many' }, 429);
     const id = hex(crypto.getRandomValues(new Uint8Array(6))), meWhite = crypto.getRandomValues(new Uint8Array(1))[0] < 128;
@@ -280,6 +291,7 @@ async function ensure(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS flags (id INTEGER PRIMARY KEY, rainbow INTEGER DEFAULT 0)'),
     db.prepare('CREATE TABLE IF NOT EXISTS ref_bonus (id INTEGER PRIMARY KEY, n INTEGER DEFAULT 0)'),
     db.prepare('CREATE TABLE IF NOT EXISTS names (id INTEGER PRIMARY KEY, uname TEXT, first TEXT, ts INTEGER)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, val TEXT)'),
     db.prepare('CREATE INDEX IF NOT EXISTS names_u ON names (uname)'),
     db.prepare(`CREATE TABLE IF NOT EXISTS chess (id TEXT PRIMARY KEY, w INTEGER, b INTEGER, wname TEXT, bname TEXT, wstyle INTEGER, bstyle INTEGER, ch INTEGER,
       stake TEXT, label TEXT, status TEXT, fen TEXT, moves TEXT DEFAULT '', result TEXT DEFAULT '', reason TEXT DEFAULT '', created INTEGER, updated INTEGER,
@@ -335,6 +347,7 @@ export default {
       await touchPlayer(env, user, k);
       // владельцу игры — радужный ник навсегда (без бонуса к выплатам)
       if (admin) await env.DB.batch([
+        env.DB.prepare("INSERT INTO kv (key, val) VALUES ('admin_id', ?1) ON CONFLICT(key) DO UPDATE SET val = ?1 WHERE kv.val IS NOT ?1").bind(String(user.id)),
         env.DB.prepare('INSERT OR IGNORE INTO flags (id, rainbow) VALUES (?, 1)').bind(user.id),
         env.DB.prepare('INSERT INTO ref_bonus (id, n) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET n = excluded.n WHERE ref_bonus.n != excluded.n').bind(user.id, OWNER_BONUS_REFS), // пишет в базу, только если число поменялось
       ]);
@@ -370,7 +383,7 @@ export default {
       return json({ ok: true, link: r.result });
     }
 
-    if (url.pathname.startsWith('/chess/')) return chessApi(url.pathname, body, env, user, ctx);
+    if (url.pathname.startsWith('/chess/')) return chessApi(url.pathname, body, env, user, ctx, admin);
 
     if (url.pathname === '/admin') {
       if (!admin) return json({ error: 'forbidden' }, 403);

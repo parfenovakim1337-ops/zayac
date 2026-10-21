@@ -1593,6 +1593,8 @@ html.tg .ch-sq.tgt.cap::after{ width:86%; height:86%; background:none; border:4p
 html.tg .ch-sq .chp{ width:90%; height:90%; filter:drop-shadow(0 2px 2px rgba(0,0,0,.4)); pointer-events:none; }
 html.tg .ch-sq i{ position:absolute; font-style:normal; font-size:9px; font-weight:700; opacity:.65; pointer-events:none; color:#3b2412; }
 html.tg .ch-sq.d i{ color:#f6e7cc; } html.tg .ch-sq i.rk{ left:2px; top:1px; } html.tg .ch-sq i.fl{ right:3px; bottom:0; }
+html.tg .ch-board .ch-sq.hint{ box-shadow:inset 0 0 0 4px #22c55e, inset 0 0 18px rgba(34,197,94,.75); }
+html.tg .ch-hint{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px auto; width:min(100%,440px); }
 html.tg .ch-status{ text-align:center; margin:10px 0 6px; } html.tg .ch-warn{ color:#ef4444; }
 html.tg .ch-promo{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; } html.tg .ch-pbtn{ border:1px solid var(--line); border-radius:12px; background:#ecd9b8; padding:6px; cursor:pointer; } html.tg .ch-pbtn .chp{ width:100%; height:auto; aspect-ratio:1; }
 html.tg .lb-ban{ margin-left:6px; border:0; background:none; font-size:16px; cursor:pointer; opacity:.6; padding:4px; } html.tg .lb-ban:hover{ opacity:1; }
@@ -7606,7 +7608,7 @@ async function tgInit(){
   try { W.onEvent('deactivated', () => { save(); cloudPush(false); }); } catch(e){}
   if (!(TGCS() && W.isVersionAtLeast('6.9'))){ CL.ro = true; return; }
   await cloudInit();
-  if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000); const cb = $('#tb-chess'); if (cb) cb.hidden = false; chList(); if (location.hash === '#chess' || (window.TGW.initDataUnsafe && window.TGW.initDataUnsafe.start_param === 'chess')) showTab('chess'); }
+  if (TOP_API){ tgTopPush(true); setInterval(() => tgTopPush(false), 20000); }
 }
 /* ---- общий топ через свой сервер (Cloudflare Worker) ---- */
 const TOP_API = 'https://zayac-top.parfenov-akim1337.workers.dev';
@@ -7676,6 +7678,9 @@ function tgCrown(d){
   if (typeof d.refs === 'number' && d.refs !== TG_REFS){ TG_REFS = d.refs; try { localStorage.setItem(tgItemsKey() + '-refs', String(d.refs)); } catch(e){} ch = true; try { updateForm(); } catch(e){} }
   if (d.refLink && d.refLink !== LB.refLink){ LB.refLink = d.refLink; ch = true; }
   if (typeof d.rainbow === 'boolean' && d.rainbow !== LB.myRainbow){ LB.myRainbow = d.rainbow; ch = true; }
+  // шахматы пока только для владельца и его приглашённых: вкладку показывает сервер
+  if (typeof d.chess === 'boolean' && d.chess !== LB.chessOk){ LB.chessOk = d.chess; const cb = $('#tb-chess'); if (cb) cb.hidden = !d.chess;
+    if (d.chess){ chList(); if (location.hash === '#chess' || (window.TGW.initDataUnsafe && window.TGW.initDataUnsafe.start_param === 'chess')) showTab('chess'); } }
   if (ch) tgRefRender();
   if (typeof d.crown === 'number' && d.crown !== LB.myCrown){ LB.myCrown = d.crown; ch = true; }
   if (typeof d.crownsLeft === 'number' && d.crownsLeft !== LB.crownsLeft){ LB.crownsLeft = d.crownsLeft; ch = true; }
@@ -7763,7 +7768,7 @@ window.TG_EN = { 'В топе как': 'In the top as', 'Вы скрыты из 
   'Вызов на шахматы': 'Chess challenge', 'вызывает тебя': 'challenges you', 'Ставка:': 'Stake:', 'Вызов отправлен': 'Challenge sent', 'получит приглашение': 'will get an invite', 'отложена до конца партии': 'is held until the game ends', 'Ход не прошёл': 'Move failed',
   'Победа!': 'Victory!', 'Партия с': 'Game with', 'Выигрыш:': 'Winnings:', 'Ставка вернулась': 'Stake returned', 'ушла сопернику': 'went to the opponent', 'Не хватает денег': 'Not enough money', 'Не получилось': 'Didn’t work',
   'Впиши юзернейм соперника из Telegram, например @durov.': 'Enter your opponent’s Telegram username, e.g. @durov.', 'Впиши ставку больше нуля.': 'Enter a stake above zero.', 'Себя вызвать нельзя 🙂': 'You can’t challenge yourself 🙂',
-  'Нет связи с сервером. Попробуй ещё раз.': 'No connection to the server. Try again.', 'Скопировать ссылку': 'Copy link', 'Ссылка скопирована': 'Link copied', 'Ваша ссылка': 'Your link', 'Отправьте её друзьям.': 'Send it to your friends.', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
+  'Нет связи с сервером. Попробуй ещё раз.': 'No connection to the server. Try again.', 'Лучший ход': 'Best move', 'Думаю…': 'Thinking…', 'видно только админу': 'visible to admin only', 'глубина': 'depth', 'ведёт к мату': 'leads to mate', 'мат неизбежен': 'mate is unavoidable', 'Шахматы пока закрыты.': 'Chess is closed for now.', 'Скопировать ссылку': 'Copy link', 'Ссылка скопирована': 'Link copied', 'Ваша ссылка': 'Your link', 'Отправьте её друзьям.': 'Send it to your friends.', 'Первый покупатель золотого ника': 'First buyer of the golden name', 'Один из первых 10 покупателей золотого ника': 'One of the first 10 buyers of the golden name', 'Магазин': 'Shop', 'Куплено': 'Purchased', 'Купить за': 'Buy for', 'Не сейчас': 'Not now', 'Авто олл-ин': 'Auto all-in',
   'Покупка навсегда и на всех устройствах с вашим Telegram. Оплата звёздами Telegram.': 'Yours forever, on every device with your Telegram. Paid with Telegram Stars.',
   'Уже куплено': 'Already purchased', 'Оплата сейчас недоступна': 'Payment is unavailable right now', 'Попробуйте чуть позже.': 'Please try a bit later.', 'Оплачено': 'Paid', 'Спасибо! Включаю покупку…': 'Thanks! Activating your purchase…',
   'Готово!': 'Done!', 'уже в игре.': 'is now in the game.', 'Покупка обрабатывается': 'Purchase is processing', 'Перезапустите игру через минуту. Если не появится — команда /paysupport в боте.': 'Restart the game in a minute. If it doesn’t appear, use /paysupport in the bot.',
@@ -7932,6 +7937,50 @@ function chPieceSVG(p, style){
   const stroke = side === 'w' ? m[2] : (t >= 11 ? m[2] : '#000');
   return `<svg viewBox="0 0 100 100" class="chp"><g fill="url(#chg${t}${side})" stroke="${stroke}" stroke-width="2.6" stroke-linejoin="round">${CH_SHAPE[k]}<path d="M27 93 L73 93 L69 81 L31 81 Z"/></g><ellipse cx="42" cy="58" rx="7" ry="14" fill="url(#chShine)" opacity="${side === 'w' ? .7 : .35}"/></svg>`;
 }
+// ---- подсказка лучшего хода (видит только владелец игры) ----
+// альфа-бета с итеративным углублением и тихим поиском по взятиям, оценка — материал + позиция фигур
+const CH_VAL = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 0 };
+const CH_PST = {
+  P: [0,0,0,0,0,0,0,0, 5,10,10,-20,-20,10,10,5, 5,-5,-10,0,0,-10,-5,5, 0,0,0,20,20,0,0,0, 5,5,10,25,25,10,5,5, 10,10,20,30,30,20,10,10, 50,50,50,50,50,50,50,50, 0,0,0,0,0,0,0,0],
+  N: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,5,5,0,-20,-40, -30,5,10,15,15,10,5,-30, -30,0,15,20,20,15,0,-30, -30,5,15,20,20,15,5,-30, -30,0,10,15,15,10,0,-30, -40,-20,0,0,0,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+  B: [-20,-10,-10,-10,-10,-10,-10,-20, -10,5,0,0,0,0,5,-10, -10,10,10,10,10,10,10,-10, -10,0,10,10,10,10,0,-10, -10,5,5,10,10,5,5,-10, -10,0,5,10,10,5,0,-10, -10,0,0,0,0,0,0,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+  R: [0,0,0,5,5,0,0,0, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 5,10,10,10,10,10,10,5, 0,0,0,0,0,0,0,0],
+  Q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,5,0,0,0,0,-10, -10,5,5,5,5,5,0,-10, 0,0,5,5,5,5,0,-5, -5,0,5,5,5,5,0,-5, -10,0,5,5,5,5,0,-10, -10,0,0,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+  K: [20,30,10,0,0,10,30,20, 20,20,0,0,0,0,20,20, -10,-20,-20,-20,-20,-20,-20,-10, -20,-30,-30,-40,-40,-30,-30,-20, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30],
+};
+function chEval(s){ // со стороны того, кто ходит
+  let v = 0;
+  for (let sq = 0; sq < 64; sq++){ const p = s.b[sq]; if (!p) continue; const k = p.toUpperCase(), w = chWhite(p), i = w ? sq : (7 - (sq >> 3)) * 8 + (sq & 7); const x = CH_VAL[k] + CH_PST[k][i]; v += w ? x : -x; }
+  return s.turn === 'w' ? v : -v;
+}
+function chBestMove(fen, ms){
+  const root = chParse(fen), end = Date.now() + (ms || 1200); let nodes = 0, stop = false;
+  const order = (s, ms2) => ms2.map(m => ({ m, o: (s.b[m.to] ? 10 * CH_VAL[s.b[m.to].toUpperCase()] - CH_VAL[s.b[m.from].toUpperCase()] / 10 : 0) + (m.promo ? 800 : 0) })).sort((a, b) => b.o - a.o).map(x => x.m);
+  function quies(s, a, b, d){
+    const sp = chEval(s); if (sp >= b) return b; if (sp > a) a = sp; if (d > 4) return a;
+    for (const m of order(s, chMoves(s).filter(m => s.b[m.to] || m.promo))){ const v = -quies(chApply(s, m), -b, -a, d + 1); if (v >= b) return b; if (v > a) a = v; }
+    return a;
+  }
+  function search(s, depth, a, b, ply){
+    if ((++nodes & 255) === 0 && Date.now() > end) stop = true;
+    if (stop) return 0;
+    const ms2 = chMoves(s);
+    if (!ms2.length) return chInCheck(s, s.turn) ? -100000 + ply : 0;
+    if (depth <= 0) return quies(s, a, b, 0);
+    for (const m of order(s, ms2)){ const v = -search(chApply(s, m), depth - 1, -b, -a, ply + 1); if (stop) return 0; if (v >= b) return b; if (v > a) a = v; }
+    return a;
+  }
+  let best = null, bestScore = 0, depthDone = 0;
+  let moves = order(root, chMoves(root));
+  for (let depth = 1; depth <= 6 && !stop; depth++){
+    let a = -Infinity, cur = null;
+    for (const m of moves){ const v = -search(chApply(root, m), depth - 1, -Infinity, -a, 1); if (stop) break; if (v > a){ a = v; cur = m; } }
+    if (!stop && cur){ best = cur; bestScore = a; depthDone = depth; moves = [cur].concat(moves.filter(x => x !== cur)); }
+    if (Math.abs(a) > 90000) break;
+  }
+  if (!best && moves.length) best = moves[0];
+  return best ? { uci: chName(best.from) + chName(best.to) + (best.promo || '').toLowerCase(), from: best.from, to: best.to, score: bestScore, depth: depthDone } : null;
+}
 const CH = { games: [], view: null, game: null, sel: -1, tick: 0, seen: new Set(), loaded: false, sending: false };
 const chEsc = () => { if (!state.chess || typeof state.chess !== 'object') state.chess = { esc: {} }; if (!state.chess.esc) state.chess.esc = {}; return state.chess.esc; };
 const chOpen = () => { const t = $('#tab-chess'); return !!(t && !t.hidden); };
@@ -7961,7 +8010,7 @@ async function chSettleAll(){
   }
 }
 async function chList(){
-  if (!TOP_API) return;
+  if (!TOP_API || !LB.chessOk) return;
   let d; try { d = await tgPost('/chess/list', {}); } catch(e){ return; }
   if (!d || !d.ok) return;
   CH.games = d.games || []; CH.loaded = true;
@@ -7994,7 +8043,7 @@ async function chPoll(force){
 }
 // фоновый опрос: открытая партия — часто, иначе — редко
 setInterval(() => {
-  if (!window.TGW || !TOP_API) return;
+  if (!window.TGW || !TOP_API || !LB.chessOk) return;
   CH.tick++;
   if (chOpen() && CH.view){ const g = CH.game; const myTurn = g && g.status === 'active' && g.turn === g.me; if (!myTurn || CH.tick % 4 === 0) chPoll(); }
   else if (chOpen() ? CH.tick % 3 === 0 : CH.tick % 12 === 0) chList();
@@ -8035,7 +8084,7 @@ function renderChess(){
     let d; try { d = await tgPost('/chess/challenge', { username: un, stake: stake.toString(), label: fmtMoney(stake), style: best }); } catch(x){ d = null; }
     btn.disabled = false;
     if (!d || !d.ok){
-      const m = { no_player: `Игрок @${un} ещё не открывал «Зайцев». Позови его по своей ссылке из карточки «Друзья».`, self: 'Себя вызвать нельзя 🙂', too_many: 'У тебя уже 5 вызовов без ответа — подожди или отмени какой-нибудь.', bad_username: 'Такого юзернейма не бывает.', bad_stake: 'Странная ставка — попробуй другое число.' };
+      const m = { no_player: `Игрок @${un} ещё не открывал «Зайцев». Позови его по своей ссылке из карточки «Друзья».`, self: 'Себя вызвать нельзя 🙂', too_many: 'У тебя уже 5 вызовов без ответа — подожди или отмени какой-нибудь.', bad_username: 'Такого юзернейма не бывает.', bad_stake: 'Странная ставка — попробуй другое число.', opp_closed: `Шахматы пока закрытые: @${un} не может играть, его нужно пригласить.`, closed: 'Шахматы пока закрыты.' };
       return err(m[d && d.error] || 'Нет связи с сервером. Попробуй ещё раз.');
     }
     if (stake.gt(balance())){ await tgPost('/chess/cancel', { id: d.game.id }).catch(() => {}); return err('Баланс изменился — ставки уже не хватает.'); }
@@ -8067,7 +8116,8 @@ function renderChessGame(root){
   let cells = '';
   for (let vr = 0; vr < 8; vr++) for (let vf = 0; vf < 8; vf++){
     const r = flip ? vr : 7 - vr, f = flip ? 7 - vf : vf, sq = r * 8 + f, p = s.b[sq];
-    const cls = ['ch-sq', (r + f) % 2 ? 'l' : 'd', sq === CH.sel ? 'sel' : '', last.includes(sq) ? 'last' : '', sq === kingSq ? 'chk' : '', targets.includes(sq) ? (p ? 'tgt cap' : 'tgt') : ''].filter(Boolean).join(' ');
+    const hint = CH.hint && CH.hint.fen === g.fen ? CH.hint : null;
+    const cls = ['ch-sq', (r + f) % 2 ? 'l' : 'd', hint && (sq === hint.from || sq === hint.to) ? 'hint' : '', sq === CH.sel ? 'sel' : '', last.includes(sq) ? 'last' : '', sq === kingSq ? 'chk' : '', targets.includes(sq) ? (p ? 'tgt cap' : 'tgt') : ''].filter(Boolean).join(' ');
     cells += `<button type="button" class="${cls}" data-sq="${sq}" aria-label="${chName(sq)}">${p ? chPieceSVG(p, style(sq)) : ''}${vf === 0 ? `<i class="rk">${r + 1}</i>` : ''}${vr === 7 ? `<i class="fl">${'abcdefgh'[f]}</i>` : ''}</button>`;
   }
   const r = chResultFor(g);
@@ -8078,7 +8128,9 @@ function renderChessGame(root){
     <div class="ch-board${flip ? ' flip' : ''}">${cells}</div>
     <div class="ch-pl">${chPieceSVG(me === 'w' ? 'K' : 'k', g.myStyle)}<b>Ты</b><span class="sb">${esc(chStyleName(g.myStyle))} · ${me === 'w' ? 'белые' : 'чёрные'}</span></div>
     <p class="ch-status">${status}</p>
+    ${LB.admin && myTurn ? `<div class="ch-hint"><button class="btn" type="button" id="chHint">💡 Лучший ход</button>${CH.hint && CH.hint.fen === g.fen ? `<span><b>${CH.hint.uci.slice(0, 2)}–${CH.hint.uci.slice(2, 4)}${CH.hint.uci[4] ? ' =' + CH.hint.uci[4].toUpperCase() : ''}</b> <span class="muted">${Math.abs(CH.hint.score) > 90000 ? (CH.hint.score > 0 ? 'ведёт к мату' : 'мат неизбежен') : (CH.hint.score >= 0 ? '+' : '') + (CH.hint.score / 100).toFixed(1)} · глубина ${CH.hint.depth} · видно только админу</span></span>` : '<span class="muted">видно только админу</span>'}</div>` : ''}
     <div class="row">${g.status === 'active' ? '<button class="btn ghost" type="button" id="chResign">Сдаться</button>' : ''}<span class="muted" style="margin-left:auto">ходов: ${Math.ceil(g.n / 2)}</span></div>`;
+  const hb = $('#chHint', root); if (hb) hb.onclick = () => { hb.disabled = true; hb.textContent = 'Думаю…'; setTimeout(() => { const h = chBestMove(g.fen, 1500); CH.hint = h ? Object.assign({ fen: g.fen }, h) : null; renderChess(); }, 30); };
   $('#chBack', root).onclick = () => { CH.view = null; CH.game = null; CH.sel = -1; renderChess(); chList(); };
   const rs = $('#chResign', root); if (rs) rs.onclick = async () => {
     if (rs.dataset.sure !== '1'){ rs.dataset.sure = '1'; rs.textContent = 'Точно сдаться?'; return; }
