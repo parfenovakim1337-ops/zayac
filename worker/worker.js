@@ -56,6 +56,7 @@ let ready = false, memo = null;
 // Товары за звёзды. Цена — в звёздах (XTR). Меняя цену здесь, поменяйте её и в игре (TG_ITEMS).
 const ITEMS = {
   autoall: { title: 'Авто олл-ин навсегда', description: 'Кнопка «Авто олл-ин»: игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп». Покупка навсегда, на всех устройствах.', price: 149 },
+  support: { title: 'Значок support ❤️', description: 'Маленькая надпись support ❤️ рядом с твоим ником в топе — все видят, что ты поддержал игру. Навсегда.', price: 3 },
   gold: { title: 'Золотой ник в топе', description: 'Ваше имя в общем топе горит золотом. Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки. Покупка навсегда.', price: 49 },
 };
 const GAME_URL_DEFAULT = 'https://zayac.pages.dev/';
@@ -349,6 +350,7 @@ export default {
       if (!memo || Date.now() - memo.at > 15000) {
         const { results } = await env.DB.prepare(`SELECT id, k, name, lg, money, best, rare, ts,
           EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'gold' AND p.refunded = 0) AS gold,
+          EXISTS (SELECT 1 FROM purchases p WHERE p.user_id = top.id AND p.item = 'support' AND p.refunded = 0) AS sup,
           ((SELECT COUNT(*) FROM players pl WHERE pl.ref_by = top.id AND pl.ok = 1) + COALESCE((SELECT n FROM ref_bonus rb WHERE rb.id = top.id), 0) >= ${REF_RAINBOW} OR EXISTS (SELECT 1 FROM flags f WHERE f.id = top.id AND f.rainbow = 1)) AS rainbow
           FROM top WHERE banned = 0 ORDER BY lg DESC LIMIT ?`).bind(LIMIT).all();
         const c = await crowns(env.DB);

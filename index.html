@@ -1586,6 +1586,7 @@ html.tg .lb-rainbow{ background:linear-gradient(90deg,#ff4d4d,#ffb84d,#ffe94d,#4
 html.tg .tg-ref-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:6px 0 10px; }
 html.tg .tg-ref-stats > div{ display:grid; justify-items:center; gap:2px; padding:10px 6px; border:1px solid var(--line); border-radius:12px; text-align:center; }
 html.tg .tg-ref-stats b{ font-size:20px; } html.tg .tg-ref-stats .muted{ font-size:11px; }
+html.tg .lb-sup{ display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:10px; font-weight:700; line-height:1.5; letter-spacing:.02em; vertical-align:middle; color:#ff6b9a; background:rgba(255,77,128,.14); border:1px solid rgba(255,107,154,.35); -webkit-text-fill-color:#ff6b9a; }
 html.tg .tg-crowns{ font-size:12px; color:var(--gold, #ffb020); margin-top:4px; }
 html.tg .tg-shop{ display:grid; gap:10px; margin-top:6px; }
 html.tg .tg-item{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--line); border-radius:12px; }
@@ -7651,14 +7652,14 @@ async function tgTopLoad(){
   if (!TOP_API) return;
   try {
     const d = await (await fetch(TOP_API + '/top')).json();
-    LB.rows = (d.rows || []).map(x => { const r = lbClean(x.k, Object.assign({}, x, { nick: x.name })); if (r){ r.gold = !!x.gold; r.crown = x.crown | 0; r.rainbow = !!x.rainbow; } return r; }).filter(Boolean);
+    LB.rows = (d.rows || []).map(x => { const r = lbClean(x.k, Object.assign({}, x, { nick: x.name })); if (r){ r.gold = !!x.gold; r.crown = x.crown | 0; r.rainbow = !!x.rainbow; r.sup = !!x.sup; } return r; }).filter(Boolean);
     LB.rows.forEach(r => keepNick(r.nick)); LB.status = 'live'; LB.err = ''; if (typeof d.crownsLeft === 'number' && d.crownsLeft !== LB.crownsLeft){ LB.crownsLeft = d.crownsLeft; tgShopRender(); }
   } catch(e){ if (LB.status !== 'live'){ LB.status = 'error'; LB.err = 'Не удалось загрузить топ. Попробуйте позже.'; } }
   renderTopIfOpen();
 }
 function tgTopHead(){
   keepNick(tgName());
-  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} ${tgNameHTML({ gold: tgHas('gold'), crown: LB.myCrown || 0, rainbow: TG_REFS >= REF_RAINBOW || !!LB.myRainbow }, tgName())}</span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
+  return `<span class="lb-acc">${LB.banned ? 'Вы скрыты из топа' : 'В топе как'} ${tgNameHTML({ gold: tgHas('gold'), sup: tgHas('support'), crown: LB.myCrown || 0, rainbow: TG_REFS >= REF_RAINBOW || !!LB.myRainbow }, tgName())}</span>${LB.admin ? '<button class="btn ghost" type="button" id="lbHidden">Скрытые</button>' : ''}`;
 }
 function tgTopAfter(root){
   const nb = $('#lbNick', root); if (nb) nb.onclick = () => openModal({ title: 'Ник в топе', body: `<p class="muted">От 3 до 16 символов: буквы, цифры, пробел, _ и -. Пусто — будет имя из Telegram.</p><input class="input" id="tgNick" maxlength="16" autocomplete="off" value="${esc(state.settings.nick || '')}">`,
@@ -7685,6 +7686,7 @@ var TG_REFS = 0; // друзей, пришедших по ссылке (var — 
 const TG_ITEMS = {
   autoall: { title: 'Авто олл-ин навсегда', desc: 'Игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп».', price: 149 },
   gold: { title: 'Золотой ник в топе', desc: 'Ваше имя в общем топе горит золотом.', price: 49 },
+  support: { title: 'Значок support ❤️', desc: 'Маленькая надпись support ❤️ рядом с ником в топе — все видят, что ты поддержал игру.', price: 3 },
 };
 const tgItemsKey = () => 'rabbit-slots-tg-items-' + (window.TGU ? window.TGU.id : 0);
 function tgItemsLoad(){ try { TG_REFS = +localStorage.getItem(tgItemsKey() + '-refs') || 0; } catch(e){} try { LB.items = new Set(JSON.parse(localStorage.getItem(tgItemsKey()) || '[]')); } catch(e){ LB.items = new Set(); } }
@@ -7713,7 +7715,8 @@ function tgNameHTML(r, nm){
   const cls = r.rainbow ? 'lb-rainbow' : r.gold ? 'lb-gold' : '';
   const b = `<b translate="no"${cls ? ` class="${cls}"` : ''}>${esc(nm || lbName(r))}</b>`;
   const crown = r.crown ? `<span class="lb-crown" title="${r.crown === 1 ? 'Первый покупатель золотого ника' : 'Один из первых 10 покупателей золотого ника'}">👑</span>` : '';
-  return crown + (r.crown === 1 ? `<span class="lb-star">${b}<i>✦</i><i>✦</i><i>✧</i></span>` : b);
+  const sup = r.sup ? '<span class="lb-sup" translate="no">support ❤️</span>' : '';
+  return crown + (r.crown === 1 ? `<span class="lb-star">${b}<i>✦</i><i>✦</i><i>✧</i></span>` : b) + sup;
 }
 /* ---- приглашения друзей ---- */
 const REF_STEP = 0.1, REF_CAP = 20, REF_RAINBOW = 5; // как в worker.js
@@ -7777,7 +7780,7 @@ window.TG_EN = { 'В топе как': 'In the top as', 'Вы скрыты из 
   'Не удалось загрузить топ. Попробуйте позже.': "Couldn't load the top. Try again later.",
   'Ваш результат обновляется сам раз в минуту, когда меняется.': 'Your result updates itself once a minute when it changes.',
   'Авто олл-ин навсегда': 'Auto all-in forever', 'Золотой ник в топе': 'Golden name in the top', 'Игра сама ставит весь баланс серия за серией, пока вы не нажмёте «Стоп».': 'The game bets your whole balance series after series until you press “Stop”.',
-  'Ваше имя в общем топе горит золотом.': 'Your name shines gold in the top.', 'Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки': 'The first 10 buyers get a crown by their name, the very first one also gets sparkles', 'Осталось корон:': 'Crowns left:', 'из 10': 'of 10', 'Все 10 корон уже разобраны': 'All 10 crowns are taken', 'Друзья': 'Friends', 'друзей': 'friends', 'к выплатам': 'to payouts', 'до радужного ника': 'to a rainbow name', 'радужный ник': 'rainbow name',
+  'Ваше имя в общем топе горит золотом.': 'Your name shines gold in the top.', 'Значок support ❤️': 'support ❤️ badge', 'Маленькая надпись support ❤️ рядом с ником в топе — все видят, что ты поддержал игру.': 'A small support ❤️ tag next to your name in the top — everyone sees you supported the game.', 'Первым 10 покупателям — корона у ника, самому первому — ещё и звёздочки': 'The first 10 buyers get a crown by their name, the very first one also gets sparkles', 'Осталось корон:': 'Crowns left:', 'из 10': 'of 10', 'Все 10 корон уже разобраны': 'All 10 crowns are taken', 'Друзья': 'Friends', 'друзей': 'friends', 'к выплатам': 'to payouts', 'до радужного ника': 'to a rainbow name', 'радужный ник': 'rainbow name',
   'Каждый друг, впервые открывший игру по твоей ссылке, добавляет': 'Every friend who opens the game for the first time via your link adds', 'к множителю выплат: 1 друг — ×1.1, 5 друзей — ×1.5, максимум': 'to your payout multiplier: 1 friend — ×1.1, 5 friends — ×1.5, up to', 'Ещё': 'More', '— и твой ник в топе станет радужным': '— and your name in the top turns rainbow', 'Твой ник в топе — радужный': 'Your name in the top is rainbow',
   'Позвать друзей': 'Invite friends', 'Шахматы': 'Chess', 'Вызови игрока по юзернейму Telegram. Оба ставят одинаковую сумму — победитель забирает всё, при ничьей ставки возвращаются. Твои фигуры сделаны из материала твоего лучшего зайца.': 'Challenge a player by their Telegram username. Both put up the same stake — the winner takes it all, a draw returns the stakes. Your pieces are made of your best rabbit’s material.',
   'Твои фигуры:': 'Your pieces:', 'Выбей зайца пореже — фигуры станут круче': 'Get a rarer rabbit — your pieces get cooler', 'Юзернейм соперника': 'Opponent’s username', 'Ставка, $': 'Stake, $', 'Всё': 'All', 'Бросить вызов': 'Challenge',
@@ -8311,7 +8314,7 @@ function renderTop(){
   // Кто не может записать себя в общий топ, видит свою строку локально — на том месте, где был бы
   let rows = LB.rows;
   if (LB.status === 'live' && (window.TGW ? (!LB.me || LB.banned) : (!AC.on || AC.local))){
-    const b = lbBody(); rows = rows.concat([{ id: '__me', lg: b.lg, money: myMoney, best: b.best !== '0' ? new D(b.best) : null, rare: b.rare, gold: !!(window.TGW && tgHas('gold')), rainbow: !!(window.TGW && (TG_REFS >= REF_RAINBOW || LB.myRainbow)), crown: window.TGW ? LB.myCrown || 0 : 0, nick: window.TGW ? tgName() : AC.on ? AC.nick : 'Вы (гость)', ts: Date.now(), local: true }]).sort((x, y) => y.lg - x.lg);
+    const b = lbBody(); rows = rows.concat([{ id: '__me', lg: b.lg, money: myMoney, best: b.best !== '0' ? new D(b.best) : null, rare: b.rare, gold: !!(window.TGW && tgHas('gold')), sup: !!(window.TGW && tgHas('support')), rainbow: !!(window.TGW && (TG_REFS >= REF_RAINBOW || LB.myRainbow)), crown: window.TGW ? LB.myCrown || 0 : 0, nick: window.TGW ? tgName() : AC.on ? AC.nick : 'Вы (гость)', ts: Date.now(), local: true }]).sort((x, y) => y.lg - x.lg);
   }
   const myIdx = rows.findIndex(r => r.id === me);
   const head = `<div class="shop-head"><div><h2>Лидерборд</h2><p class="muted">Топ-${LB_LIMIT} игроков по балансу. ${window.TGW ? 'Ваш результат обновляется сам раз в минуту, когда меняется.' : 'Ваш результат обновляется сам каждые 20 секунд, когда меняется.'}</p></div>
